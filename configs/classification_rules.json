@@ -1,0 +1,10 @@
+{
+  "categories": {
+    "yes": {"label": "Да", "description": "Требование полностью поддерживается"},
+    "no": {"label": "Нет", "description": "Требование не поддерживается"},
+    "partial": {"label": "Частично", "description": "Частично или требует доработки"},
+    "nd": {"label": "НД", "description": "Нет данных в базе знаний"}
+  },
+  "require_citation": true,
+  "min_confidence_for_auto": 0.85
+}

@@ -1,0 +1,9 @@
+model_name: "BAAI/bge-m3"
+max_length: 512
+normalize_embeddings: true
+chunk_size: 250
+chunk_overlap: 50
+vector_store:
+  type: "chromadb"
+  persist_directory: "./chroma_data"
+  collection_name: "mango_kb"
