@@ -235,6 +235,8 @@ credentials.json
 *.docx
 !test_data/*.xlsx
 !test_data/*.docx
+!knowledge_base/sources/*.xlsx
+!knowledge_base/sources/*.docx
 
 # Python cache and build artifacts
 __pycache__/
