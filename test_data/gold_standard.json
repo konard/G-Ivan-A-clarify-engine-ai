@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "description": "Эталонные ответы экспертов для test_data/sample_tz.xlsx. Используется для оценки качества классификации (precision/recall) и регрессионного тестирования промптов.",
+  "items": [
+    {
+      "id": 1,
+      "requirement": "Интеграция с Битрикс24 для синхронизации контактов",
+      "expected_status": "Да",
+      "expert_comment": "Поддерживается коннектором v2.1",
+      "expected_sources": ["functional_list_sample.xlsx"]
+    },
+    {
+      "id": 2,
+      "requirement": "Анализ эмоций абонентов в реальном времени",
+      "expected_status": "Частично",
+      "expert_comment": "Только постобработка, не реалтайм",
+      "expected_sources": ["functional_list_sample.xlsx"]
+    },
+    {
+      "id": 3,
+      "requirement": "Прямая интеграция с SAP через RFC",
+      "expected_status": "НД",
+      "expert_comment": "Нет данных в публичной документации",
+      "expected_sources": []
+    },
+    {
+      "id": 4,
+      "requirement": "Запись всех разговоров в облаке",
+      "expected_status": "Да",
+      "expert_comment": "Стандартная функция тарифа Профи",
+      "expected_sources": ["user_guide_call_recording.pdf", "functional_list_sample.xlsx"]
+    },
+    {
+      "id": 5,
+      "requirement": "API для внешней CRM с методом POST /call/start",
+      "expected_status": "Да",
+      "expert_comment": "Описано в Public API Guide v2.0",
+      "expected_sources": ["api_guide_excerpt.pdf"]
+    }
+  ]
+}

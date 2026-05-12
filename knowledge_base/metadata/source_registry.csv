@@ -1,0 +1,4 @@
+filename,version,sha256_hash,indexed_date,status,coverage
+functional_list_sample.xlsx,1.0,pending,2024-05-12,Active,High
+api_guide_excerpt.pdf,1.0,pending,2024-05-12,Active,Medium
+user_guide_call_recording.pdf,1.0,pending,2024-05-12,Active,High
