@@ -20,3 +20,4 @@
 
 ## Пример
 - [`2026-05-12_review_mvp-context_v1.md`](2026-05-12_review_mvp-context_v1.md) — ревью концепции MVP в контексте задач классификации требований Да/Нет/Частично/НД.
+- [`2026-05-13_analysis_next-docs-implementation-task_v1.md`](2026-05-13_analysis_next-docs-implementation-task_v1.md) — формулировка следующей приоритетной задачи по документации и коду на основе аудита репозитория.
