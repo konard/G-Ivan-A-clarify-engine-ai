@@ -5,7 +5,8 @@ Loads documents from ``knowledge_base/sources``, chunks them with the bge-m3
 tokenizer (see :mod:`src.rag.chunker`), embeds them with
 ``sentence-transformers``, persists vectors into ChromaDB and finally syncs
 ``knowledge_base/metadata/source_registry.csv`` with the canonical schema
-``filename, version, sha256_hash, indexed_date, status, coverage`` (issue #45).
+``filename, version, sha256_hash, indexed_date, status, coverage`` (issues #45,
+#48).
 
 Hashing uses SHA-256 (the MD5 path from previous revisions was removed because
 MD5 is no longer acceptable for integrity checks).

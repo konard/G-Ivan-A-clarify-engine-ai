@@ -171,11 +171,11 @@ def run_analysis(
     run_id: Optional[str] = None,
 ) -> PipelineStats:
     """Run the full analysis pipeline on a single ТЗ file."""
-    run_id = run_id or str(uuid.uuid4())
+    run_id = run_id or uuid.uuid4().hex
     configure_json_logging(run_id=run_id)
     logger.info("Pipeline started: input=%s output=%s", input_file, output_file)
 
-    requirements = load_requirements(input_file)
+    requirements = load_requirements(input_file, run_id=run_id)
 
     if retriever is None:
         kb_docs = list(documents) if documents is not None else _read_knowledge_base(Path(kb_dir))

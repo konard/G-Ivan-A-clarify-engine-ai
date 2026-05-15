@@ -1,4 +1,5 @@
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -14,26 +15,7 @@ from src.pipeline import run_analysis  # noqa: E402
 from src.rag.retriever import _hash_embedding, build_retriever  # noqa: E402
 
 
-def test_run_analysis_end_to_end(tmp_path: Path) -> None:
-    input_file = tmp_path / "tz.xlsx"
-    pd.DataFrame(
-        {"Требование": ["Поддержка интеграции с Битрикс24", "Запись звонков"]}
-    ).to_excel(input_file, index=False)
-
-    documents = [
-        {
-            "text": "MANGO CRM поддерживает коннектор Битрикс24.",
-            "source": "crm.md",
-            "metadata": {"section": "4.2"},
-        },
-        {
-            "text": "Запись звонков и расшифровка STT доступны в постобработке.",
-            "source": "ai.md",
-            "metadata": {"section": "3.1"},
-        },
-    ]
-    retriever = build_retriever(documents=documents, embedder=_hash_embedding)
-
+def _build_fake_llm() -> LLMClient:
     def fake_provider(system_prompt, user_message, cfg):
         return json.dumps(
             {
@@ -49,7 +31,7 @@ def test_run_analysis_end_to_end(tmp_path: Path) -> None:
             ensure_ascii=False,
         )
 
-    llm_client = LLMClient(
+    return LLMClient(
         llm_config={
             "active_provider": "fake",
             "fallback_providers": ["fake"],
@@ -58,12 +40,35 @@ def test_run_analysis_end_to_end(tmp_path: Path) -> None:
         provider_callers={"fake": fake_provider},
     )
 
+
+def _build_retriever():
+    documents = [
+        {
+            "text": "MANGO CRM поддерживает коннектор Битрикс24.",
+            "source": "crm.md",
+            "metadata": {"section": "4.2"},
+        },
+        {
+            "text": "Запись звонков и расшифровка STT доступны в постобработке.",
+            "source": "ai.md",
+            "metadata": {"section": "3.1"},
+        },
+    ]
+    return build_retriever(documents=documents, embedder=_hash_embedding)
+
+
+def test_run_analysis_end_to_end(tmp_path: Path) -> None:
+    input_file = tmp_path / "tz.xlsx"
+    pd.DataFrame(
+        {"Требование": ["Поддержка интеграции с Битрикс24", "Запись звонков"]}
+    ).to_excel(input_file, index=False)
+
     output_file = tmp_path / "result.xlsx"
     stats = run_analysis(
         input_file=str(input_file),
         output_file=str(output_file),
-        retriever=retriever,
-        llm_client=llm_client,
+        retriever=_build_retriever(),
+        llm_client=_build_fake_llm(),
     )
 
     assert stats.total == 2
@@ -75,6 +80,67 @@ def test_run_analysis_end_to_end(tmp_path: Path) -> None:
     assert "[Статус]" in df.columns
     assert "[Комментарий]" in df.columns
     assert (df["[Статус]"] == "Да").all()
+
+
+def test_run_analysis_propagates_run_id_to_logs_stats_and_export(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """RunID must flow end-to-end: pipeline → JSON logs → ``PipelineStats.run_id``
+    → ``[RunID]`` Excel column.
+
+    Verifies the audit-trail criterion of issue #48: every JSON-log line and
+    every row of the export carry the same UUID.
+    """
+    input_file = tmp_path / "tz.xlsx"
+    pd.DataFrame(
+        {"Требование": ["Поддержка интеграции с Битрикс24", "Запись звонков"]}
+    ).to_excel(input_file, index=False)
+
+    output_file = tmp_path / "result.xlsx"
+    fixed_run_id = "abcdef0123456789abcdef0123456789"
+    stats = run_analysis(
+        input_file=str(input_file),
+        output_file=str(output_file),
+        retriever=_build_retriever(),
+        llm_client=_build_fake_llm(),
+        run_id=fixed_run_id,
+    )
+
+    # 1. PipelineStats carries the run_id verbatim.
+    assert stats.run_id == fixed_run_id
+    assert stats.as_dict()["run_id"] == fixed_run_id
+
+    # 2. JSON logs configured by the pipeline carry run_id on every record.
+    log_blob = capsys.readouterr().err
+    parsed_lines = []
+    for line in log_blob.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            parsed_lines.append(json.loads(line))
+        except json.JSONDecodeError:
+            pytest.fail(f"Non-JSON log line emitted: {line!r}")
+    assert parsed_lines, "Expected at least one JSON log line from the pipeline run"
+    loggers_seen = {entry.get("logger") for entry in parsed_lines}
+    assert "src.parsers.excel_parser" in loggers_seen, (
+        f"excel_parser logs missing from {loggers_seen}"
+    )
+    for entry in parsed_lines:
+        assert entry.get("run_id") == fixed_run_id, entry
+
+    # 3. Excel export contains a [RunID] column with the same value on every row.
+    df = pd.read_excel(output_file)
+    assert "[RunID]" in df.columns
+    assert (df["[RunID]"] == fixed_run_id).all()
+
+    # 4. MVP four columns are present (FR-06).
+    for col in ("[Статус]", "[Комментарий]", "[Confidence]", "[RunID]"):
+        assert col in df.columns, f"MVP column {col} missing in export"
+
+    # Reset root logger configuration so subsequent tests are not affected.
+    root = logging.getLogger()
+    root.handlers.clear()
 
 
 def test_run_analysis_marks_failed_row_as_oshibka(tmp_path: Path) -> None:
