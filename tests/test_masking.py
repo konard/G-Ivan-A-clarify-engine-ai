@@ -5,8 +5,11 @@ Tests cover all patterns from configs/masking_rules.yaml:
 - Russian phone numbers (+7 format)
 - IP addresses
 - Internal domains (mango, internal, corp, local)
+- Legal entity names (ООО/АО/ПАО/ЗАО/НАО/ОАО)
+- Individual entrepreneur surnames (ИП)
 """
 
+import logging
 import pytest
 from pathlib import Path
 import sys
@@ -230,6 +233,68 @@ class TestCombinedSensitiveData:
         domain_text = "Access portal.corp.local for docs"
         domain_result = mask_text(domain_text)
         assert "[DOMAIN]" in domain_result
+
+
+class TestLegalEntityMasking:
+    """Test masking of Russian legal entity names (FR-05)."""
+
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ('Поставка для ООО "Вектор"', "Поставка для ООО [LEGAL_ENTITY]"),
+            ("Заказчик: АО Прогресс", "Заказчик: АО [LEGAL_ENTITY]"),
+            ('Работа с ооо "тест"', "Работа с ооо [LEGAL_ENTITY]"),
+            ('Договор с ПАО "Сбербанк"', "Договор с ПАО [LEGAL_ENTITY]"),
+            ('Сторона ЗАО "Альфа"', "Сторона ЗАО [LEGAL_ENTITY]"),
+            ('Поставщик НАО "Бета"', "Поставщик НАО [LEGAL_ENTITY]"),
+            ('Подрядчик ОАО "Гамма"', "Подрядчик ОАО [LEGAL_ENTITY]"),
+        ],
+    )
+    def test_legal_entity_replacements(self, text, expected):
+        """Prefix must be preserved, name replaced with [LEGAL_ENTITY]."""
+        assert mask_text(text) == expected
+
+    def test_legal_entity_name_is_not_leaked(self):
+        """Original entity name must be absent from the output."""
+        result = mask_text('Соглашение с ООО "СекретКомпани"')
+        assert "СекретКомпани" not in result
+        assert "[LEGAL_ENTITY]" in result
+        assert result.startswith("Соглашение с ООО")
+
+
+class TestIEMasking:
+    """Test masking of individual entrepreneur (ИП) surnames (FR-05)."""
+
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ("Ответственный: ИП Смирнов", "Ответственный: ИП [IE_SURNAME]"),
+            ('ИП "Петров"', "ИП [IE_SURNAME]"),
+            ("Договор с ИП Иванов от 01.01", "Договор с ИП [IE_SURNAME] от 01.01"),
+        ],
+    )
+    def test_ie_replacements(self, text, expected):
+        """Prefix ИП must be preserved, surname/token replaced."""
+        assert mask_text(text) == expected
+
+    def test_ie_surname_is_not_leaked(self):
+        """Original surname must not appear in the output."""
+        result = mask_text("Контрагент ИП Сидоров подписал")
+        assert "Сидоров" not in result
+        assert "ИП [IE_SURNAME]" in result
+
+
+class TestMaskingLogging:
+    """Test that masking emits debug log events without leaking data."""
+
+    def test_debug_log_does_not_contain_original_value(self, caplog):
+        """Debug logs must reference pattern name only, never the secret."""
+        caplog.set_level(logging.DEBUG, logger="src.llm.masking")
+        mask_text('ООО "СекретноеИмя"', context="req-42")
+        joined = "\n".join(record.getMessage() for record in caplog.records)
+        assert "СекретноеИмя" not in joined
+        assert "legal_entity_name" in joined
+        assert "req-42" in joined
 
 
 class TestEdgeCases:
