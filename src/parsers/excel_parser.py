@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -22,10 +21,6 @@ except ImportError as exc:  # pragma: no cover - import guarded for environments
 else:
     _IMPORT_ERROR = None
 
-# Глобальный run_id для текущей сессии парсинга
-_current_run_id: str = str(uuid.uuid4())
-
-# Инициализация логгера
 logger = logging.getLogger(__name__)
 
 REQUIREMENT_COLUMN_CANDIDATES_DEFAULT = [
@@ -42,16 +37,18 @@ REQUIREMENT_COLUMN_CANDIDATES_DEFAULT = [
 
 
 class JsonFormatter(logging.Formatter):
-    """Форматтер логов в JSON с добавлением run_id."""
+    """Форматтер логов в JSON c полем ``run_id`` (если оно есть на записи)."""
 
     def format(self, record: logging.LogRecord) -> str:
-        log_entry = {
+        log_entry: Dict[str, Any] = {
             "timestamp": self.formatTime(record),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
-            "run_id": getattr(record, "run_id", _current_run_id),
         }
+        run_id = getattr(record, "run_id", None)
+        if run_id:
+            log_entry["run_id"] = run_id
         if record.exc_info:
             log_entry["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_entry, ensure_ascii=False)
@@ -61,26 +58,26 @@ def setup_logging(
     level: str = "INFO",
     log_file: Optional[str] = None,
     use_json: bool = True,
+    run_id: Optional[str] = None,
 ) -> None:
-    """Настроить логирование с JSON форматом и run_id.
+    """Настроить корневой логгер.
 
-    Args:
-        level: Уровень логирования (DEBUG, INFO, WARNING, ERROR, CRITICAL).
-        log_file: Путь к файлу лога. Если None, логи выводятся в stderr.
-        use_json: Если True, использовать JSON формат, иначе текстовый.
+    Используется только когда парсер вызывают самостоятельно (без пайплайна).
+    Когда :func:`load_requirements` вызывается из ``src.pipeline.run_analysis``,
+    логирование уже сконфигурировано (``configure_json_logging``), поэтому здесь
+    важно НЕ сбрасывать обработчики автоматически.
     """
     logger_root = logging.getLogger()
     logger_root.setLevel(getattr(logging, level.upper(), logging.INFO))
-
-    # Очищаем существующие обработчики
     logger_root.handlers.clear()
 
     formatter: logging.Formatter
     if use_json:
         formatter = JsonFormatter()
     else:
+        run_id_marker = f"[run_id:{run_id}] " if run_id else ""
         formatter = logging.Formatter(
-            f"%(asctime)s - %(name)s - %(levelname)s - [run_id:{_current_run_id}] - %(message)s"
+            f"%(asctime)s - %(name)s - %(levelname)s - {run_id_marker}%(message)s"
         )
 
     handler: logging.Handler
@@ -153,7 +150,7 @@ class ExcelParseError(RuntimeError):
 
     def __init__(self, message: str, run_id: Optional[str] = None):
         super().__init__(message)
-        self.run_id = run_id or _current_run_id
+        self.run_id = run_id
 
 
 def _ensure_pandas() -> None:
@@ -165,20 +162,12 @@ def _ensure_pandas() -> None:
 
 
 def _detect_requirement_column(
-    df: "pd.DataFrame", keywords: Optional[List[str]] = None
+    df: "pd.DataFrame",
+    keywords: Optional[List[str]] = None,
+    *,
+    log_extra: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Return the column name to use as the source of requirement text.
-
-    Args:
-        df: DataFrame с данными Excel.
-        keywords: Список ключевых слов для поиска колонки.
-
-    Returns:
-        Имя найденной колонки.
-
-    Raises:
-        ExcelParseError: Если ни одна подходящая колонка не найдена.
-    """
+    """Return the column name to use as the source of requirement text."""
     if keywords is None:
         keywords = REQUIREMENT_COLUMN_CANDIDATES_DEFAULT
 
@@ -195,7 +184,7 @@ def _detect_requirement_column(
             logger.warning(
                 "No standard requirement column found; using fallback column '%s'.",
                 column,
-                extra={"run_id": _current_run_id},
+                extra=log_extra or {},
             )
             return column
 
@@ -209,6 +198,7 @@ def load_requirements(
     sheet_name: Optional[Union[str, int]] = 0,
     column: Optional[str] = None,
     config_path: Optional[Union[str, Path]] = None,
+    run_id: Optional[str] = None,
 ) -> List[Dict[str, Union[int, str]]]:
     """Load tender requirements from an Excel workbook.
 
@@ -218,6 +208,10 @@ def load_requirements(
         column: Explicit requirement column name. If omitted, the parser tries
             the standard names listed in :data:`REQUIREMENT_COLUMN_CANDIDATES_DEFAULT`.
         config_path: Путь к файлу конфигурации. Если не указан, используется конфиг по умолчанию.
+        run_id: Идентификатор сессии (UUID4) — добавляется во все JSON-логи как
+            поле ``run_id`` и пробрасывается в :class:`ExcelParseError`. Когда
+            парсер вызывается из ``src.pipeline.run_analysis``, ``run_id``
+            берётся из пайплайна, что обеспечивает сквозную трассировку.
 
     Returns:
         A list of dictionaries shaped as ``{"id": int, "text": str}``.
@@ -228,53 +222,43 @@ def load_requirements(
     """
     _ensure_pandas()
 
-    # Загружаем конфигурацию
     config = load_config(config_path)
-    
-    # Настраиваем логирование на основе конфига
-    log_config = config.get("logging", {})
-    setup_logging(
-        level=log_config.get("level", "INFO"),
-        log_file=log_config.get("output") if log_config.get("format") == "json" else None,
-        use_json=log_config.get("format", "json") == "json",
-    )
+    log_extra: Dict[str, Any] = {"run_id": run_id} if run_id else {}
 
     path = Path(file_path)
     if not path.exists():
-        logger.error("Excel file not found: %s", path, extra={"run_id": _current_run_id})
+        logger.error("Excel file not found: %s", path, extra=log_extra)
         raise FileNotFoundError(f"Excel file not found: {path}")
     if path.stat().st_size == 0:
-        logger.error("Excel file is empty: %s", path, extra={"run_id": _current_run_id})
-        raise ExcelParseError(f"Excel file is empty: {path}", _current_run_id)
+        logger.error("Excel file is empty: %s", path, extra=log_extra)
+        raise ExcelParseError(f"Excel file is empty: {path}", run_id)
 
     try:
         df = pd.read_excel(path, sheet_name=sheet_name)
     except Exception as exc:  # pandas wraps many parser errors
-        logger.error("Failed to read Excel file %s: %s", path, exc, extra={"run_id": _current_run_id})
-        raise ExcelParseError(f"Failed to read Excel file {path}: {exc}", _current_run_id) from exc
+        logger.error("Failed to read Excel file %s: %s", path, exc, extra=log_extra)
+        raise ExcelParseError(f"Failed to read Excel file {path}: {exc}", run_id) from exc
 
     if df.empty:
-        logger.error("Excel sheet is empty: %s", path, extra={"run_id": _current_run_id})
-        raise ExcelParseError(f"Excel sheet is empty: {path}", _current_run_id)
+        logger.error("Excel sheet is empty: %s", path, extra=log_extra)
+        raise ExcelParseError(f"Excel sheet is empty: {path}", run_id)
 
-    # Получаем ключевые слова из конфига или используем дефолтные
     keywords = config.get("column_keywords", REQUIREMENT_COLUMN_CANDIDATES_DEFAULT)
-    target_column = column or _detect_requirement_column(df, keywords)
+    target_column = column or _detect_requirement_column(df, keywords, log_extra=log_extra)
     if target_column not in df.columns:
         logger.error(
             "Column '%s' is not present in %s. Available columns: %s",
             target_column,
             path,
             list(df.columns),
-            extra={"run_id": _current_run_id},
+            extra=log_extra,
         )
         raise ExcelParseError(
             f"Column '{target_column}' is not present in {path}. "
             f"Available columns: {list(df.columns)}",
-            _current_run_id,
+            run_id,
         )
 
-    # Настройки обработки текста
     text_config = config.get("text_processing", {})
     do_trim = text_config.get("trim", True)
     do_lowercase = text_config.get("lowercase", False)
@@ -298,7 +282,7 @@ def load_requirements(
                 idx,
                 len(text),
                 text[:50],
-                extra={"run_id": _current_run_id},
+                extra=log_extra,
             )
             continue
         requirements.append({"id": idx, "text": text})
@@ -308,14 +292,14 @@ def load_requirements(
             "Column '%s' in %s does not contain any valid requirements.",
             target_column,
             path,
-            extra={"run_id": _current_run_id},
+            extra=log_extra,
         )
         raise ExcelParseError(
             f"Column '{target_column}' in {path} does not contain any non-empty values.",
-            _current_run_id,
+            run_id,
         )
 
     logger.info(
-        "Loaded %d requirements from %s", len(requirements), path, extra={"run_id": _current_run_id}
+        "Loaded %d requirements from %s", len(requirements), path, extra=log_extra
     )
     return requirements
