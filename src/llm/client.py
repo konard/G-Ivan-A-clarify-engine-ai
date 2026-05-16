@@ -2,9 +2,8 @@
 
 The client loads provider settings from ``configs/llm_config.yaml`` and masking
 regexes from ``configs/masking_rules.yaml``. It tries providers in priority
-order (Qwen → DeepSeek → GigaChat → YandexGPT by default) and returns a
-validated JSON payload that matches the schema defined in
-``prompts/system_classifier_v1.0.md``.
+order (DeepSeek → GigaChat by default) and returns a validated JSON payload
+that matches the schema defined in ``prompts/system_classifier_v1.0.md``.
 
 Network policy (per ADR-001 and issues #39 / #45):
 - Per-call HTTP timeout: 30 seconds.
@@ -167,10 +166,8 @@ class LLMClient:
         self.masking_config_path = masking_config_path
         self.system_prompt = self._load_system_prompt(prompt_path)
         self.provider_callers: Dict[str, ProviderCall] = {
-            "qwen_dashscope": _call_dashscope,
             "deepseek": _call_deepseek,
             "gigachat": _call_gigachat,
-            "yandex": _call_yandex,
             "stub": _call_stub,
         }
         if provider_callers:
@@ -335,29 +332,9 @@ def _call_stub(system_prompt: str, user_message: str, config: Dict[str, Any]) ->
         ),
         "citations": [],
         "requires_ba_review": True,
-        "recommendations": "Настройте API-ключи провайдеров (DashScope, DeepSeek, GigaChat, YandexGPT).",
+        "recommendations": "Настройте API-ключи провайдеров (DeepSeek, GigaChat).",
     }
     return json.dumps(payload, ensure_ascii=False)
-
-
-def _call_dashscope(system_prompt: str, user_message: str, config: Dict[str, Any]) -> str:
-    api_key = _resolve_env(config.get("api_key_env"))
-    if not api_key:
-        raise RuntimeError("DashScope API key is not configured")
-    data = _http_post_with_retries(
-        "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json_payload={
-            "model": config.get("model", "qwen-max"),
-            "temperature": config.get("temperature", 0.1),
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
-            "response_format": {"type": "json_object"},
-        },
-    )
-    return data["choices"][0]["message"]["content"]
 
 
 def _call_deepseek(system_prompt: str, user_message: str, config: Dict[str, Any]) -> str:
@@ -422,26 +399,3 @@ def _call_gigachat(system_prompt: str, user_message: str, config: Dict[str, Any]
         },
     )
     return data["choices"][0]["message"]["content"]
-
-
-def _call_yandex(system_prompt: str, user_message: str, config: Dict[str, Any]) -> str:
-    folder_id = _resolve_env(config.get("folder_id_env"))
-    iam_token = _resolve_env(config.get("iam_token_env"))
-    if not folder_id or not iam_token:
-        raise RuntimeError("Yandex folder_id / IAM token are not configured")
-    data = _http_post_with_retries(
-        "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
-        headers={"Authorization": f"Bearer {iam_token}", "Content-Type": "application/json"},
-        json_payload={
-            "modelUri": f"gpt://{folder_id}/{config.get('model', 'yandexgpt-pro')}",
-            "completionOptions": {
-                "temperature": config.get("temperature", 0.1),
-                "maxTokens": 2000,
-            },
-            "messages": [
-                {"role": "system", "text": system_prompt},
-                {"role": "user", "text": user_message},
-            ],
-        },
-    )
-    return data["result"]["alternatives"][0]["message"]["text"]

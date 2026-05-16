@@ -33,7 +33,7 @@ def _sample_results():
                 "confidence": 0.91,
                 "requires_ba_review": False,
                 "recommendations": "n/a",
-                "provider": "qwen",
+                "provider": "deepseek",
             },
         },
         {
