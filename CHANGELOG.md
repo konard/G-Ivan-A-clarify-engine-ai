@@ -7,7 +7,7 @@
 ## [Unreleased]
 
 ### Added
-- `.env.example` — шаблон переменных окружения с плейсхолдерами `DEEPSEEK_API_KEY`, `GIGACHAT_API_KEY`, `YANDEXGPT_API_KEY` и флагами `USE_TEST_DATA_MODE`, `STRICT_EMBEDDER` (issue #59).
+- `.env.example` — шаблон переменных окружения с плейсхолдерами `DEEPSEEK_API_KEY`, `GIGACHAT_API_KEY` и флагами `USE_TEST_DATA_MODE`, `STRICT_EMBEDDER` (issue #59; `YANDEXGPT_API_KEY` исключён в issue #64).
 - `scripts/evaluate/evaluate_quality.py` — CLI для замера качества классификации (Macro-F1 и per-class P/R/F1) против `test_data/gold_standard.json`, поддерживает Excel и JSON-предсказания, JSON-логирование и опциональный детальный отчёт (issue #47, NFR-01).
 - `tests/test_quality.py` — smoke-тесты метрик, парсеров входных файлов и CLI evaluate_quality.
 - `docs/audit/2026-05-12_repository-consistency_audit_v1.md` — аудит согласованности репозитория, полноты документации и тестируемости требований (issue #21).
@@ -33,6 +33,7 @@
 
 ### Removed
 - `knowledge_base/indexing/chunk_config.yaml` — параметры чанкинга читаются только из `configs/embedding_config.yaml` (issue #45 MUST 2).
+- **LLM fallback-цепочка упрощена до двух провайдеров — DeepSeek (приоритет 1, free tier) и GigaChat (приоритет 2, RU-резидентный).** Из `configs/llm_config.yaml`, `src/llm/client.py`, `.env.example`, документации (`README.md`, `docs/CONCEPT.md`, `docs/ADR/001-rag-architecture.md`) удалены провайдеры Qwen (DashScope) и YandexGPT, а также связанные с ними переменные окружения и колеры (issue #64).
 
 ## [0.1.0-mvp] - 2026-05-12
 

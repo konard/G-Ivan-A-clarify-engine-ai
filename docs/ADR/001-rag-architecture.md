@@ -17,7 +17,7 @@ Accepted (2026-05-12)
    - BM25 — для точных терминов и артикулов.
    - Dense (cosine similarity) — для семантического поиска.
    - RRF (Reciprocal Rank Fusion, k = 60) — для ранжирования.
-4. **LLM Fallback Chain:** Qwen → DeepSeek → GigaChat → YandexGPT (концепция, раздел 5).
+4. **LLM Fallback Chain:** DeepSeek → GigaChat (концепция, раздел 5). MVP-цепочка упрощена в 2026-05 (issue #64): Qwen (DashScope) и YandexGPT исключены.
 
 ## Consequences
 
@@ -38,7 +38,7 @@ Accepted (2026-05-12)
 
 ## Triggers for Revision
 - Падение фактической точности ниже 70% по итогам пилота (Exit Criteria MVP, раздел 7 концепции).
-- Изменение состава доступных LLM-провайдеров (например, недоступность Qwen/DeepSeek/GigaChat/YandexGPT).
+- Изменение состава доступных LLM-провайдеров (например, недоступность DeepSeek или GigaChat).
 - Смена требований резидентности данных (например, запрет на использование зарубежных API даже в тестовом режиме).
 - Появление верифицированной российской модели эмбеддингов с качеством ≥ `bge-m3`.
 
@@ -51,3 +51,4 @@ Accepted (2026-05-12)
 | Версия | Дата | Изменение |
 |--------|------|-----------|
 | 1.0 | 2026-05-12 | Первая версия ADR: фиксация RAG с гибридным поиском (BM25 + Dense + RRF), ChromaDB и `BAAI/bge-m3`. |
+| 1.1 | 2026-05-16 | Упрощение LLM fallback-цепочки до двух провайдеров (DeepSeek → GigaChat); исключены Qwen (DashScope) и YandexGPT (issue #64). |

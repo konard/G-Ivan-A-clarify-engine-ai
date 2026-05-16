@@ -1,39 +1,22 @@
-active_provider: "qwen_dashscope"
+active_provider: "deepseek"
 use_test_data_mode: true
 
 providers:
-  qwen_dashscope:
-    priority: 1
-    model: "qwen-max"
-    api_key_env: "DASHSCOPE_API_KEY"
-    allowed_for_production: false
-    temperature: 0.1
-    retry_attempts: 3
   deepseek:
-    priority: 2
+    priority: 1
     model: "deepseek-chat"
     api_key_env: "DEEPSEEK_API_KEY"
     allowed_for_production: false
     temperature: 0.1
     retry_attempts: 3
   gigachat:
-    priority: 3
+    priority: 2
     model: "GigaChat-Pro"
     credentials_env: "GIGACHAT_AUTH"
     allowed_for_production: true
     temperature: 0.1
     retry_attempts: 3
-  yandex:
-    priority: 4
-    model: "yandexgpt-pro"
-    folder_id_env: "YANDEX_FOLDER_ID"
-    iam_token_env: "YANDEX_IAM_TOKEN"
-    allowed_for_production: true
-    temperature: 0.1
-    retry_attempts: 3
 
 fallback_providers:
-  - "qwen_dashscope"
   - "deepseek"
   - "gigachat"
-  - "yandex"
