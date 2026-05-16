@@ -262,6 +262,19 @@ class ClassMetrics:
     recall: float = 0.0
     f1: float = 0.0
 
+    # Verbose aliases used by the dict-based evaluate() helper.
+    @property
+    def true_positive(self) -> int:
+        return self.tp
+
+    @property
+    def false_positive(self) -> int:
+        return self.fp
+
+    @property
+    def false_negative(self) -> int:
+        return self.fn
+
     def as_dict(self) -> Dict[str, Any]:
         return {
             "label": self.label,
@@ -289,6 +302,11 @@ class EvaluationReport:
     invalid_status: List[Dict[str, str]] = field(default_factory=list)
     items: List[Dict[str, Any]] = field(default_factory=list)
     classes: Tuple[str, ...] = CLASSES
+    correct: int = 0
+
+    @property
+    def total(self) -> int:
+        return self.gold_total
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -409,6 +427,54 @@ def compute_metrics(
 
     report.macro_f1 = _safe_divide(f1_sum, len(classes_tuple))
     report.accuracy = _safe_divide(correct, report.matched)
+    report.correct = correct
+    return report
+
+
+def evaluate(
+    predictions: Mapping[Any, Any],
+    gold: Mapping[Any, Any],
+    classes: Iterable[str] = CLASSES,
+) -> EvaluationReport:
+    """Compute Macro-F1 / per-class metrics from plain ``{id: status}`` dicts.
+
+    Compared to :func:`compute_metrics`, this helper accepts the compact dict
+    shape used by unit tests and treats gold ids missing from ``predictions``
+    as a false negative for the corresponding gold class (per the issue #45
+    quality contract — silently dropping them would overstate F1).
+    """
+    classes_tuple = tuple(classes)
+    gold_records = [
+        {"id": _normalise_id(rid), "expected_status": _normalise_status(status)}
+        for rid, status in gold.items()
+    ]
+    pred_records = [
+        {"id": _normalise_id(rid), "status": _normalise_status(status)}
+        for rid, status in predictions.items()
+    ]
+    report = compute_metrics(gold_records, pred_records, classes=classes_tuple)
+
+    # compute_metrics() skips missing predictions; promote them to false
+    # negatives so a partial run cannot game the macro-F1 score.
+    gold_lookup = {_normalise_id(rid): _normalise_status(status) for rid, status in gold.items()}
+    for rid in report.missing_in_pred:
+        actual = gold_lookup.get(rid, "")
+        if actual in classes_tuple:
+            report.per_class[actual].support += 1
+            report.per_class[actual].fn += 1
+
+    # Recompute per-class precision/recall/F1 and the macro/accuracy summaries.
+    f1_sum = 0.0
+    for metrics in report.per_class.values():
+        metrics.precision = _safe_divide(metrics.tp, metrics.tp + metrics.fp)
+        metrics.recall = _safe_divide(metrics.tp, metrics.tp + metrics.fn)
+        metrics.f1 = _safe_divide(
+            2 * metrics.precision * metrics.recall,
+            metrics.precision + metrics.recall,
+        )
+        f1_sum += metrics.f1
+    report.macro_f1 = _safe_divide(f1_sum, len(classes_tuple))
+    report.accuracy = _safe_divide(report.correct, report.gold_total)
     return report
 
 
