@@ -18,6 +18,16 @@
   сбрасывается для защиты от ghost inheritance. До первого заголовка
   используется fallback по имени документа (`section_fallback=source_filename`),
   чтобы UI-цитаты имели человекочитаемую подпись.
+- **BL-15 (issue #107):** контекстно-зависимый экспорт из KB UI:
+  `src/utils/export.py` генерирует `.xlsx` и `.md` в памяти через
+  `io.BytesIO`, `configs/export_config.yaml` задаёт строгий allow-list
+  Excel-колонок (`requirement_id`, `requirement_text`, `classification`,
+  `reasoning`, `citations`), а `src/ui/app.py` показывает кнопки
+  «📥 Скачать отчет (.xlsx)» для режима «Анализ ТЗ» и
+  «📥 Сохранить диалог (.md)» для режима «Консультация». Экспорт применяет
+  `mask_text()` ко всем строковым значениям и не включает служебные поля
+  вроде `raw` / `provider`. ADR — [`docs/ADR/008-data-export.md`](docs/ADR/008-data-export.md);
+  тесты — `tests/test_context_export.py`.
 - `docs/standards/llm-behavior.md` v1.0 — стандарт параметров декодирования LLM (BL-22, issue #101): канонический блок `decoding:` (`temperature: 0.1`, `top_p: 0.9`, `seed: 42`, `max_tokens: 1024`), таблица рекомендуемых значений по провайдерам/режимам (DeepSeek, GigaChat, OpenRouter, Ollama), допустимый коридор изменений в Пилоте, обязательное аудит-логирование `decoding_lock applied`. Зарегистрирован в `docs/standards/README.md`.
 - **Prompt Library `prompts/` + `src/llm/prompt_loader.py` (BL-08, issue #94).**
   Все системные и few-shot-промпты вынесены из `src/llm/client.py` и
