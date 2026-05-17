@@ -129,7 +129,7 @@
 | **Вход** | Замаскированный текст требования + замаскированный RAG-контекст + системный промпт + few-shot |
 | **Выход** | Валидный JSON-объект `ClassificationResult` |
 | **Критерий приёмки** | Ответ соответствует схеме Pydantic (`extract_json` + `validate_payload`); для не-`НД` ответа обязательно присутствует ≥ 1 цитата; при `confidence` < 0.85 устанавливается `requires_ba_review: true`; fallback-цепочка переключает провайдера при ошибке без потери данных. |
-| **Артефакты** | `src/llm/client.py`, `src/llm/validator.py`, `prompts/system_classifier_v1.0.md`, `prompts/few_shot_examples.json`, `configs/llm_config.yaml`, `configs/classification_rules.json` |
+| **Артефакты** | `src/llm/client.py`, `src/llm/validator.py`, `src/llm/prompt_loader.py`, `prompts/system_classifier_v1.0.md`, `prompts/few_shot_examples_v1.0.json`, `configs/llm_config.yaml`, `configs/classification_rules.json` |
 
 ### FR-05. Маскирование чувствительных данных
 | Поле | Значение |
@@ -243,9 +243,25 @@
 Подробности — в [`docs/ADR/001-rag-architecture.md`](ADR/001-rag-architecture.md) (раздел Decision) и `configs/llm_config.yaml`.
 
 ### 6.5. Промпт-менеджмент
-- Системный промпт хранится как версионируемый артефакт: `prompts/system_classifier_v1.0.md`.
-- Few-shot примеры — `prompts/few_shot_examples.json` (целевой объём 3–5 примеров, обязательно покрывающие все 4 категории).
-- История изменений — `prompts/prompt_changelog.md`.
+- Все системные и few-shot-промпты хранятся в каталоге `prompts/` как
+  версионируемые артефакты по конвенции `<name>_v<MAJOR>.<MINOR>.<ext>`:
+  - `prompts/system_classifier_v1.0.md` — RAG-классификатор требований
+    (`LLMClient.classify_requirement`).
+  - `prompts/system_rag_v1.0.md` — free-text KB Q&A в Streamlit-UI
+    (`LLMClient.generate_rag_response`).
+  - `prompts/few_shot_examples_v1.0.json` — калибровочные примеры
+    (целевой объём 3–5 примеров, обязательно покрывающие все 4 категории).
+- Загрузка идёт через единый модуль `src/llm/prompt_loader.py`
+  (BL-08, issue #94). Он вычисляет SHA-256 содержимого и пишет
+  `INFO`-запись в JSON-лог с полями `prompt_name`, `prompt_version`,
+  `prompt_sha256`, `run_id` — это закрывает audit-требование BL-23.
+- В `LLMClient` сохранён минимальный inline-fallback на случай
+  broken install; реальный источник правды — файлы в `prompts/`.
+  Публичные сигнатуры `LLMClient.classify_requirement` /
+  `generate_rag_response` не меняются.
+- История изменений и SHA-256 хеши — [`prompts/prompt_changelog.md`](../prompts/prompt_changelog.md).
+- Архитектурное решение и DoD при добавлении новой версии —
+  [`docs/ADR/004-prompt-management.md`](ADR/004-prompt-management.md).
 - Владелец — Prompt Owner ([`docs/standards/roles.md`](standards/roles.md), раздел 2.3).
 
 ### 6.6. Конфигурация (нет хардкода)

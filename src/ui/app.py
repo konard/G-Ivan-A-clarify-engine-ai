@@ -58,11 +58,18 @@ PROVIDER_DISPLAY = {
     "ollama": "Ollama",
 }
 
-SYSTEM_PROMPT = (
-    "You are an assistant for the Clarify Engine knowledge base.\n"
-    "Answer the user's question using ONLY the provided context chunks. "
-    "Quote source filenames in square brackets (e.g. [filename.pdf]) when you "
-    "rely on a chunk. If the context is insufficient, say so explicitly.\n"
+# BL-08 (issue #94): the RAG system prompt is now a versioned artefact in
+# ``prompts/``. The Streamlit module loads it lazily inside ``main()`` so an
+# import of this module (e.g. from ``tests/test_citation_links.py``) never
+# touches the filesystem. A minimal fallback is kept so the UI still renders
+# something sensible when the prompt file is missing — operators should fix
+# the install rather than edit the constant.
+_SYSTEM_PROMPT_NAME = "system_rag"
+_SYSTEM_PROMPT_VERSION = "v1.0"
+_SYSTEM_PROMPT_FALLBACK = (
+    "You are an assistant for the Clarify Engine knowledge base. "
+    "Answer using ONLY the provided context chunks. "
+    "Quote source filenames in square brackets when you rely on a chunk. "
     "Respond in Markdown."
 )
 
@@ -119,6 +126,31 @@ def get_llm_client():
     from src.llm.client import LLMClient
 
     return LLMClient.from_config(config_path=str(LLM_CONFIG_PATH))
+
+
+@st.cache_resource(show_spinner=False)
+def get_rag_system_prompt() -> str:
+    """Return the RAG system prompt from the versioned prompt library.
+
+    BL-08 (issue #94): no hardcoded prompt in the UI. The loader emits an
+    INFO log record carrying ``prompt_name`` / ``prompt_version`` /
+    ``prompt_sha256`` so the audit trail in JSON logs stays consistent
+    with the classifier path.
+    """
+    from src.llm.prompt_loader import PromptNotFoundError, load_prompt
+
+    try:
+        return load_prompt(
+            _SYSTEM_PROMPT_NAME,
+            version=_SYSTEM_PROMPT_VERSION,
+            prompts_dir=PROJECT_ROOT / "prompts",
+        ).content
+    except PromptNotFoundError:
+        st.warning(
+            "System prompt prompts/system_rag_v1.0.md not found — using minimal fallback. "
+            "Re-install the repository to restore prompt audit trail."
+        )
+        return _SYSTEM_PROMPT_FALLBACK
 
 
 # ----------------------------------------------------------------- retrieval --
@@ -376,7 +408,7 @@ def main() -> None:
     try:
         with st.spinner("Calling LLM (GigaChat → OpenRouter → Ollama)…"):
             client = get_llm_client()
-            answer = client.generate_rag_response(SYSTEM_PROMPT, prompt)
+            answer = client.generate_rag_response(get_rag_system_prompt(), prompt)
     except LLMError as exc:
         st.error(str(exc))
         render_chunks(chunks, settings["debug"])

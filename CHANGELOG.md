@@ -7,6 +7,21 @@
 ## [Unreleased]
 
 ### Added
+- **Prompt Library `prompts/` + `src/llm/prompt_loader.py` (BL-08, issue #94).**
+  Все системные и few-shot-промпты вынесены из `src/llm/client.py` и
+  `src/ui/app.py` в версионируемые файлы по конвенции
+  `<name>_v<MAJOR>.<MINOR>.<ext>`: `prompts/system_classifier_v1.0.md`,
+  `prompts/system_rag_v1.0.md`, `prompts/few_shot_examples_v1.0.json`.
+  Loader (`load_prompt`, `load_few_shot_examples`,
+  `load_prompt_from_path`) вычисляет SHA-256 содержимого и пишет
+  `INFO`-запись в JSON-лог с `prompt_name`, `prompt_version`,
+  `prompt_sha256`, `run_id` — audit-трасса BL-23. `LLMClient`
+  использует `load_prompt_from_path` через существующий
+  `DEFAULT_PROMPT_PATH`, публичные сигнатуры не меняются; `src/ui/app.py`
+  загружает `system_rag_v1.0.md` через `@st.cache_resource`. Архитектура
+  и DoD — [`docs/ADR/004-prompt-management.md`](docs/ADR/004-prompt-management.md);
+  изменения промптов — `prompts/prompt_changelog.md`; 16 unit-кейсов в
+  `tests/test_prompt_loader.py`.
 - `src/ui/app.py` — Streamlit UI для ручного тестирования RAG-пайплайна по базе знаний: поле запроса, кнопка «Search KB», вывод ответа LLM в Markdown, секция «Source Chunks» с именем файла, обрезанным текстом и similarity-скором; сайдбар с тоглом Debug Mode и выбором провайдера (DeepSeek / GigaChat). ChromaDB читается из `knowledge_base/vector_store/` (коллекция `clarify_engine_kb`), эмбеддер `BAAI/bge-m3`, конфиг провайдеров — `configs/llm_config.yaml`, секреты — `.env`. Запуск: `streamlit run src/ui/app.py` (issue #70).
 - `python-dotenv` в `requirements.txt` — необходим UI для чтения `.env`.
 - `.env.example` — шаблон переменных окружения с плейсхолдерами `DEEPSEEK_API_KEY`, `GIGACHAT_API_KEY` и флагами `USE_TEST_DATA_MODE`, `STRICT_EMBEDDER` (issue #59; `YANDEXGPT_API_KEY` исключён в issue #64).

@@ -33,6 +33,10 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 import yaml
 
 from src.llm.masking import mask_text, mask_context_chunks  # noqa: F401 - re-export
+from src.llm.prompt_loader import (
+    PromptNotFoundError,
+    load_prompt_from_path,
+)
 from src.llm.validator import extract_json, validate_payload  # noqa: F401 - re-export
 
 logger = logging.getLogger(__name__)
@@ -222,15 +226,25 @@ class LLMClient:
 
     @staticmethod
     def _load_system_prompt(prompt_path: str) -> str:
-        path = Path(prompt_path)
-        if path.exists():
-            return path.read_text(encoding="utf-8")
-        logger.warning("System prompt not found at %s; using minimal fallback.", path)
-        return (
-            "You are a classifier. Respond ONLY with JSON containing keys: "
-            "requirement_id, requirement_text, classification (Да|Частично|Нет|НД), "
-            "confidence, reasoning, citations, requires_ba_review, recommendations."
-        )
+        """Load the classifier system prompt via the prompt library (BL-08).
+
+        Delegates to :func:`src.llm.prompt_loader.load_prompt_from_path` so the
+        SHA-256 of the loaded prompt is recorded in the audit log together
+        with name/version parsed from the filename. The minimal hardcoded
+        fallback stays in place for broken installs where the file is
+        absent — it is **not** an editing surface.
+        """
+        try:
+            return load_prompt_from_path(prompt_path).content
+        except PromptNotFoundError:
+            logger.warning(
+                "System prompt not found at %s; using minimal fallback.", prompt_path
+            )
+            return (
+                "You are a classifier. Respond ONLY with JSON containing keys: "
+                "requirement_id, requirement_text, classification (Да|Частично|Нет|НД), "
+                "confidence, reasoning, citations, requires_ba_review, recommendations."
+            )
 
     def mask_text(self, text: str) -> str:
         return mask_text(text, config_path=self.masking_config_path)
