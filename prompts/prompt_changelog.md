@@ -1,12 +1,48 @@
 # Prompt Changelog
 
-| Version | Date       | Author      | Changes                                                                 |
-|---------|------------|-------------|-------------------------------------------------------------------------|
-| v1.0    | 2024-05-12 | konard      | Initial release. Categories: Да/Частично/Нет/НД. Strict JSON output.    |
-|         |            |             |                                                                         |
+История изменений промптов из директории `prompts/`. Все правки обязаны
+добавлять строку в эту таблицу. SHA-256 считается по содержимому файла
+(`sha256sum prompts/<file>`); хеш меняется на каждое изменение и должен
+быть равен значению, которое логирует `src.llm.prompt_loader` при загрузке
+(`prompt_loader: loaded ... sha256=<value>`). Это закрывает требование
+аудита BL-08 / BL-23 (issue #94).
+
+## system_classifier (RAG-классификатор требований)
+
+| Version | Date       | Author | SHA-256 (hex)                                                      | Changes                                                              |
+|---------|------------|--------|---------------------------------------------------------------------|----------------------------------------------------------------------|
+| v1.0    | 2024-05-12 | konard | `e3070fdc8055f7d7653412304647ae541897d8b1b59370eb5c614651f05590f5` | Initial release. Categories: Да/Частично/Нет/НД. Strict JSON output. |
+
+## system_rag (free-text KB Q&A для UI)
+
+| Version | Date       | Author | SHA-256 (hex)                                                      | Changes                                                                                                                              |
+|---------|------------|--------|---------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| v1.0    | 2026-05-17 | konard | `a0339756d33cbbb32a461b7dbd88e72d2d7e60ec3c3660c68f052783a19614a4` | Извлечён из `src/ui/app.py::SYSTEM_PROMPT`. Контракт `<context>` + `<question>`, mitigation R-09 (prompt-injection), Markdown-вывод. |
+
+## few_shot_examples (калибровочные кейсы для classifier)
+
+| Version | Date       | Author | SHA-256 (hex)                                                      | Changes                                                                                |
+|---------|------------|--------|---------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| v1.0    | 2024-05-12 | konard | `78079ef0b7110ba87d396af51dd7be55ea6ae4aa99f9472c9d8fbb344a0fd346` | Initial release. 3 примера: Да (CRM-коннектор), Частично (sentiment), НД (SAP RFC).    |
 
 ## Validation Notes
-- Tested against few_shot_examples.json
-- JSON schema compliance: ✅
-- Citation enforcement: ✅
-- Hallucination rate (test set): <5%
+
+- Loader (`src.llm.prompt_loader`) логирует имя, версию и SHA-256 на каждый
+  вызов; запись попадает в JSON-лог пайплайна вместе с `run_id`
+  (см. `src/pipeline.py::configure_json_logging`).
+- При расхождении хеша в таблице и хеша на диске CI / ревьюер видят это в
+  diff: правка промпта без правки changelog не пройдёт DoD.
+- Регресс-тесты прогоняются на `few_shot_examples_v1.0.json`; покрытие
+  JSON-схемы — `src/llm/validator.py`; галлюцинации на тест-сете <5 %.
+
+## How to add a new version
+
+1. Создайте новый файл по конвенции `<name>_v<MAJOR>.<MINOR>.<ext>`,
+   например `system_classifier_v1.1.md`.
+2. Считайте хеш: `sha256sum prompts/<file>`.
+3. Добавьте строку в соответствующую таблицу выше: версия, дата, автор,
+   хеш, краткое описание изменений.
+4. Обновите вызовы загрузки только если меняется default-версия —
+   `LLMClient(prompt_path=...)` / `load_prompt("...", version="v1.1")`.
+5. Не удаляйте предыдущие версии: они нужны для воспроизведения
+   исторических прогонов Golden Set (BL-05).

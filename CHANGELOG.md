@@ -10,6 +10,21 @@
 - **BL-06 (issue #92): `chunk_size` поднят с 250 до 512, `chunk_overlap` — с 50 до 64.** Изменение размера окна меняет структуру индекса ChromaDB — после мерджа владелец задачи выполняет полный reindex (`python knowledge_base/indexing/build_index.py`) и прогоняет Golden Set (BL-05). Старая коллекция `clarify_engine_kb` несовместима с новыми параметрами; её необходимо пересоздать.
 
 ### Added
+- **Prompt Library `prompts/` + `src/llm/prompt_loader.py` (BL-08, issue #94).**
+  Все системные и few-shot-промпты вынесены из `src/llm/client.py` и
+  `src/ui/app.py` в версионируемые файлы по конвенции
+  `<name>_v<MAJOR>.<MINOR>.<ext>`: `prompts/system_classifier_v1.0.md`,
+  `prompts/system_rag_v1.0.md`, `prompts/few_shot_examples_v1.0.json`.
+  Loader (`load_prompt`, `load_few_shot_examples`,
+  `load_prompt_from_path`) вычисляет SHA-256 содержимого и пишет
+  `INFO`-запись в JSON-лог с `prompt_name`, `prompt_version`,
+  `prompt_sha256`, `run_id` — audit-трасса BL-23. `LLMClient`
+  использует `load_prompt_from_path` через существующий
+  `DEFAULT_PROMPT_PATH`, публичные сигнатуры не меняются; `src/ui/app.py`
+  загружает `system_rag_v1.0.md` через `@st.cache_resource`. Архитектура
+  и DoD — [`docs/ADR/004-prompt-management.md`](docs/ADR/004-prompt-management.md);
+  изменения промптов — `prompts/prompt_changelog.md`; 16 unit-кейсов в
+  `tests/test_prompt_loader.py`.
 - **BL-07 (issue #93):** два режима работы KB-тестового UI (`src/ui/app.py`) — **«📊 Анализ ТЗ»** (полностью stateless, токен-cost совпадает с pre-BL-07 baseline) и **«💬 Консультация по документации»** (stateful чат, история ≤ `ui.max_history_messages` сообщений, по умолчанию 6). Переключатель режимов в `st.sidebar.radio`, кнопка «🧹 Очистить историю», автоматический сброс истории при смене режима (`_ensure_mode_state`), инлайн истории в `<history>`-блок промпта без изменения сигнатуры `LLMClient.generate_rag_response()`, JSON-лог `ui_prompt_built mode=… history_messages=… approx_tokens=…` на каждый вызов. Конфиг — `configs/llm_config.yaml` (`ui.max_history_messages`). ADR — [`docs/ADR/004-ui-operation-modes.md`](docs/ADR/004-ui-operation-modes.md); обновлён `docs/CONCEPT.md` §6.2 (компонент UI) и §6.8 (режимы работы UI). Регресс-тесты — `tests/test_ui_modes.py`.
 - `src/rag/chunker.py::split_sections` и флаг `section_aware_chunking` в `configs/embedding_config.yaml` — section-aware splitter режет текст по заголовкам (Markdown `#`, нумерованные разделы `\d+(\.\d+)+`, локализованные `Раздел N` / `Section N`, CAPS-блоки PDF) до применения token-окна; заголовок остаётся в первом чанке секции (BL-06, issue #92).
 - `tests/test_chunker.py` — unit-тесты L1-контракта: дефолты 512/64, guardrails 384–768, корректность section-aware разбиения и пропагация флагов из конфига (BL-06, issue #92).
