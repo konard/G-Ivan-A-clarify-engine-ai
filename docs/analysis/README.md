@@ -17,6 +17,10 @@
 | Analysis | `analysis` | Аналитические заметки по проблеме |
 | Audit | `audit` | Аудит кода, архитектуры, безопасности |
 | Decision | `decision` | Принятые решения вне ADR |
+| Sprint Execution Report | `sprint-[N]-execution-report` | Итоговый отчёт о выполнении спринта (шаблон: [`sprint-execution-report_template.md`](sprint-execution-report_template.md)) |
+
+## Шаблоны в этом каталоге
+- [`sprint-execution-report_template.md`](sprint-execution-report_template.md) — шаблон итогового отчёта по спринту. Заполняется после каждого спринта, имя итогового файла: `YYYY-MM-DD_sprint-[N]-execution-report_v1.md`. Правила и ответственность — см. [`docs/CONCEPT.md §8.1`](../CONCEPT.md#81-этапы) и [`docs/standards/roles.md §2.4`](../standards/roles.md).
 
 ## Пример
 - [`2026-05-12_review_mvp-context_v1.md`](2026-05-12_review_mvp-context_v1.md) — ревью концепции MVP в контексте задач классификации требований Да/Нет/Частично/НД.

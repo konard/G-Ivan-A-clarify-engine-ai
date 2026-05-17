@@ -1,6 +1,6 @@
 # 👥 Roles & Responsibilities — Команда проекта
 
-**Версия:** 1.0 | **Дата:** 2026-05-12 | **Статус:** Approved
+**Версия:** 1.1 | **Дата:** 2026-05-17 | **Статус:** Approved
 
 ---
 
@@ -44,6 +44,13 @@
   - A/B-тестирование и обновление `prompt_changelog.md`.
   - Валидация качества классификации (целевая метрика F1 ≥ 75%, см. раздел 4 концепции).
 
+### 2.4. Sprint Execution Report (отчёт о выполнении спринта)
+- **Шаблон:** [`docs/analysis/sprint-execution-report_template.md`](../analysis/sprint-execution-report_template.md).
+- **Заполняет (Responsible):** Code Agent ([@konard](https://github.com/konard)) — в течение 1 рабочего дня после завершения спринта.
+- **Ревью и приёмка (Accountable):** Product Owner ([@G-Ivan-A](https://github.com/G-Ivan-A)).
+- **Куда сохранять:** [`docs/analysis/`](../analysis/), имя файла — `YYYY-MM-DD_sprint-[N]-execution-report_v1.md` ([`naming-convention.md`](naming-convention.md)).
+- **Definition of Done спринта** включает наличие заполненного отчёта (см. [`docs/CONCEPT.md §8.1`](../CONCEPT.md#81-этапы)).
+
 ---
 
 ## 3. Матрица ответственности (RACI, сокращённая)
@@ -56,6 +63,7 @@
 | Промпты и их версионирование | A | C | **R** |
 | Коммит PR в `main` | **R** | — | — |
 | Приёмка MVP / валидация качества | **A/R** | C | **R** |
+| Заполнение Sprint Execution Report | **A** | **R** | C |
 
 > Обозначения: **R** — Responsible (исполнитель), **A** — Accountable (отвечающий), **C** — Consulted (консультируемый).
 
@@ -70,3 +78,4 @@
 | Версия | Дата | Изменение |
 |--------|------|-----------|
 | 1.0 | 2026-05-12 | Первая версия документа ролей: Product Owner, Code Agent, Prompt Owner. |
+| 1.1 | 2026-05-17 | Добавлен §2.4 — ответственность за Sprint Execution Report ([issue #85](https://github.com/G-Ivan-A/clarify-engine-ai/issues/85)). |
