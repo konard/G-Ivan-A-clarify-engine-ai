@@ -312,6 +312,8 @@
 
 ### 8.1. Этапы
 
+> **Sprint Execution Report (Definition of Done спринта).** По итогам каждого спринта Code Agent ([@konard](https://github.com/konard)) в течение 1 рабочего дня заполняет отчёт по шаблону [`docs/analysis/sprint-execution-report_template.md`](analysis/sprint-execution-report_template.md). Файл сохраняется в [`docs/analysis/`](analysis/) с именем `YYYY-MM-DD_sprint-[N]-execution-report_v1.md` (см. [`docs/standards/naming-convention.md`](standards/naming-convention.md)). Ревью и приёмка — Product Owner ([@G-Ivan-A](https://github.com/G-Ivan-A)); ответственность зафиксирована в [`docs/standards/roles.md §2.4`](standards/roles.md). Наличие заполненного отчёта — обязательный элемент DoD каждого спринта ([issue #85](https://github.com/G-Ivan-A/clarify-engine-ai/issues/85)).
+
 #### 8.1.1. MVP (2 недели, ≤ 16 ч активной разработки)
 **Цель:** End-to-end демонстрация пайплайна на ограниченном корпусе KB.
 
@@ -332,6 +334,7 @@
 - [ ] **Multi-format export реализован:** `xlsx in → {xlsx, docx, md} out`, `docx in → {docx, md} out` — все 5 round-trip-кейсов зелёные в CI; контракт 4 MVP-полей FR-06 соблюдён во всех форматах ([BL-19](backlog/2026-05-17_backlog_rag-optimization_v1.md#121-задачи-p0-must-для-mvp-release), [BL-20](backlog/2026-05-17_backlog_rag-optimization_v1.md#121-задачи-p0-must-для-mvp-release)).
 - [ ] **UI содержит селекторы `output_format` и `output_mode`** (FR-07); `append_to_original` недоступен в production-конфиге ([BL-21](backlog/2026-05-17_backlog_rag-optimization_v1.md#121-задачи-p0-must-для-mvp-release)).
 - [ ] **Разметка результата соответствует [`docs/standards/export-markup.md`](standards/export-markup.md)** (чек-лист §9); файл-отчёт именуется `<tz_basename>_report_<runId8>.<ext>`; исходный файл не модифицируется.
+- [ ] **Sprint Execution Report** заполнен по шаблону [`docs/analysis/sprint-execution-report_template.md`](analysis/sprint-execution-report_template.md) и сохранён в [`docs/analysis/`](analysis/) ([issue #85](https://github.com/G-Ivan-A/clarify-engine-ai/issues/85)).
 
 #### 8.1.2. Пилот (3–5 недель)
 **Цель:** Валидация на реальных ТЗ с 2–3 БА, замер production-метрик.
@@ -353,6 +356,7 @@
 - [ ] Опрос удовлетворённости БА ≥ 4.0 / 5.
 - [ ] CI-pipeline зелёный на каждом PR в `main`.
 - [ ] Все рекомендации MUST/SHOULD из [`docs/audit/2026-05-12_repository-consistency_audit_v1.md`](audit/2026-05-12_repository-consistency_audit_v1.md), раздел 7, выполнены.
+- [ ] **Sprint Execution Report** заполнен по итогам каждого спринта пилота по шаблону [`docs/analysis/sprint-execution-report_template.md`](analysis/sprint-execution-report_template.md) ([issue #85](https://github.com/G-Ivan-A/clarify-engine-ai/issues/85)).
 
 **Стратегический вектор Pilot → Enterprise (для информации, не входит в Exit Criteria MVP):**
 
@@ -390,6 +394,7 @@
 - [ ] Production-нагрузка 50+ одновременных пользователей.
 - [ ] Полный комплект runbooks в [`docs/runbooks/`](runbooks/).
 - [ ] Документация автогенерируется (`mkdocs` + `mkdocstrings`).
+- [ ] **Sprint Execution Report** заполнен по итогам каждого спринта масштабирования по шаблону [`docs/analysis/sprint-execution-report_template.md`](analysis/sprint-execution-report_template.md) ([issue #85](https://github.com/G-Ivan-A/clarify-engine-ai/issues/85)).
 
 ### 8.2. Текущий статус готовности
 По итогам аудита от 2026-05-15:
