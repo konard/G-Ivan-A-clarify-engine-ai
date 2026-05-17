@@ -94,6 +94,17 @@ def _backoff_delay(attempt: int) -> int:
 class LLMError(RuntimeError):
     """Raised when every configured provider has failed."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        provider: Optional[str] = None,
+        last_error: Optional[BaseException] = None,
+    ) -> None:
+        super().__init__(message)
+        self.provider = provider
+        self.last_error = last_error
+
 
 class RetriableProviderError(RuntimeError):
     """Network / rate-limit failure that should trigger a retry."""
@@ -417,6 +428,7 @@ class LLMClient:
         }
 
         last_error: Optional[Exception] = None
+        last_provider: Optional[str] = None
         for name in RAG_FALLBACK_CHAIN:
             caller = rag_callers.get(name)
             if caller is None:
@@ -426,6 +438,7 @@ class LLMClient:
                 return caller(system_prompt, user_prompt, provider_cfg)
             except Exception as exc:  # noqa: BLE001 - fall through to next provider
                 last_error = exc
+                last_provider = name
                 logger.warning(
                     "RAG provider %s failed (%s); trying next provider.",
                     name,
@@ -435,7 +448,9 @@ class LLMClient:
 
         raise LLMError(
             "All RAG providers failed (GigaChat → OpenRouter → Ollama). "
-            f"Last error: {last_error}"
+            f"Last error: {last_error}",
+            provider=last_provider,
+            last_error=last_error,
         )
 
     def classify_requirement(
@@ -485,6 +500,7 @@ class LLMClient:
             )
 
         last_error: Optional[Exception] = None
+        last_provider: Optional[str] = None
         for provider_name, provider_cfg in self._ordered_providers():
             caller = self.provider_callers.get(provider_name)
             if caller is None:
@@ -509,6 +525,7 @@ class LLMClient:
                     )
                 except RetriableProviderError as exc:
                     last_error = exc
+                    last_provider = provider_name
                     logger.warning(
                         "Retriable failure on provider %s (attempt %d/%d): %s",
                         provider_name,
@@ -522,13 +539,18 @@ class LLMClient:
                     break  # exhaust retries → move to next provider
                 except Exception as exc:  # noqa: BLE001 - try the next provider
                     last_error = exc
+                    last_provider = provider_name
                     logger.warning(
                         "Non-retriable failure on provider %s: %s (skipping retries)",
                         provider_name,
                         exc,
                     )
                     break
-        raise LLMError(f"All providers failed; last error: {last_error}")
+        raise LLMError(
+            f"All providers failed; last error: {last_error}",
+            provider=last_provider,
+            last_error=last_error,
+        )
 
     # ------------------------------------------------------------- formatting --
     @staticmethod
