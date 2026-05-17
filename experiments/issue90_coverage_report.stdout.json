@@ -1,0 +1,130 @@
+{
+  "files_processed": 6,
+  "total_chunks": 346,
+  "legacy_coverage": 0.26011560693641617,
+  "propagated_coverage": 0.7861271676300579,
+  "legacy_section_title_fill": 0.26011560693641617,
+  "legacy_section_number_fill": 0.26011560693641617,
+  "propagated_section_title_fill": 0.7861271676300579,
+  "propagated_section_number_fill": 0.7861271676300579,
+  "inherited_share": 0.5260115606936416,
+  "max_page_distance": 6,
+  "per_file": [
+    {
+      "file": ".gitkeep",
+      "chunks": 0,
+      "legacy_coverage": 0.0,
+      "propagated_coverage": 0.0,
+      "legacy_section_title_fill": 0.0,
+      "propagated_section_title_fill": 0.0,
+      "inherited_share": 0.0,
+      "elapsed_seconds": 0.0
+    },
+    {
+      "file": "Click2call_Chrome_UserManual_1_0.pdf",
+      "chunks": 8,
+      "legacy_coverage": 0.125,
+      "propagated_coverage": 0.875,
+      "legacy_section_title_fill": 0.125,
+      "propagated_section_title_fill": 0.875,
+      "inherited_share": 0.75,
+      "elapsed_seconds": 24.9
+    },
+    {
+      "file": "MANGO_OFFICE_LK_VATS_Auth_SSO.pdf",
+      "chunks": 31,
+      "legacy_coverage": 0.4838709677419355,
+      "propagated_coverage": 1.0,
+      "legacy_section_title_fill": 0.4838709677419355,
+      "propagated_section_title_fill": 1.0,
+      "inherited_share": 0.5161290322580645,
+      "elapsed_seconds": 63.2
+    },
+    {
+      "file": "QM_manual_v-1.26.08_compressed.pdf",
+      "chunks": 149,
+      "legacy_coverage": 0.33557046979865773,
+      "propagated_coverage": 0.9932885906040269,
+      "legacy_section_title_fill": 0.33557046979865773,
+      "propagated_section_title_fill": 0.9932885906040269,
+      "inherited_share": 0.6577181208053692,
+      "elapsed_seconds": 247.2
+    },
+    {
+      "file": "Rolevaya-model-VATS_1_26_08.pdf",
+      "chunks": 94,
+      "legacy_coverage": 0.02127659574468085,
+      "propagated_coverage": 0.24468085106382978,
+      "legacy_section_title_fill": 0.02127659574468085,
+      "propagated_section_title_fill": 0.24468085106382978,
+      "inherited_share": 0.22340425531914893,
+      "elapsed_seconds": 170.0
+    },
+    {
+      "file": "SIP_trunk-1.23.43.pdf",
+      "chunks": 64,
+      "legacy_coverage": 0.34375,
+      "propagated_coverage": 0.984375,
+      "legacy_section_title_fill": 0.34375,
+      "propagated_section_title_fill": 0.984375,
+      "inherited_share": 0.640625,
+      "elapsed_seconds": 119.3
+    }
+  ],
+  "samples": [
+    {
+      "source": "Click2call_Chrome_UserManual_1_0.pdf",
+      "chunk_idx": 2,
+      "page_number": 2,
+      "section_title": "Оглавление 1. О расширении Click-to-Call................................................................................................... 2 2. Установка",
+      "section_number": "2",
+      "product": "Click2Call",
+      "section_inherited": false
+    },
+    {
+      "source": "Click2call_Chrome_UserManual_1_0.pdf",
+      "chunk_idx": 3,
+      "page_number": 2,
+      "section_title": "Оглавление 1. О расширении Click-to-Call................................................................................................... 2 2. Установка",
+      "section_number": "2",
+      "product": "Click2Call",
+      "section_inherited": true
+    },
+    {
+      "source": "MANGO_OFFICE_LK_VATS_Auth_SSO.pdf",
+      "chunk_idx": 1,
+      "page_number": 1,
+      "section_title": "Аутентификация и авторизация в рамках SSO Руководство пользователя v2 | 2026",
+      "section_number": "1",
+      "product": "ВАТС",
+      "section_inherited": false
+    },
+    {
+      "source": "MANGO_OFFICE_LK_VATS_Auth_SSO.pdf",
+      "chunk_idx": 3,
+      "page_number": 3,
+      "section_title": "Содержание v2 | 13.03.2026 1. Термины и определения........................................................................................ 3 2. Общие сведения",
+      "section_number": "2",
+      "product": "ВАТС",
+      "section_inherited": true
+    },
+    {
+      "source": "QM_manual_v-1.26.08_compressed.pdf",
+      "chunk_idx": 2,
+      "page_number": 2,
+      "section_title": "Содержание 1. Быстрый старт........................................................................................................................................................................... 4",
+      "section_number": "2",
+      "product": "Quality Management",
+      "section_inherited": false
+    },
+    {
+      "source": "QM_manual_v-1.26.08_compressed.pdf",
+      "chunk_idx": 3,
+      "page_number": 2,
+      "section_title": "Содержание 1. Быстрый старт........................................................................................................................................................................... 4",
+      "section_number": "2",
+      "product": "Quality Management",
+      "section_inherited": true
+    }
+  ]
+}

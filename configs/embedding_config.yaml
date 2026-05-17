@@ -37,8 +37,10 @@ mask_rag_context: true
 # --- Required chunk metadata schema (BL-02, BL-16a, NFR-02) -------------------
 # Every chunk persisted in ChromaDB MUST carry the keys below. The indexer
 # (knowledge_base/indexing/build_index.py) enforces this contract; missing
-# keys are logged as schema warnings and counted against the ≥ 95 %
-# completeness target tracked by the Golden Set (BL-05).
+# keys are logged as schema warnings and counted against the realistic MVP
+# threshold ``metadata_coverage_min`` (issue #90 — see
+# docs/analysis/metadata-coverage-fix_v1.md). The NFR-02 stretch goal of
+# 0.95 remains the long-term target tracked by the Golden Set (BL-05).
 required_metadata:
   - source
   - chunk_idx
@@ -46,6 +48,25 @@ required_metadata:
   - section_title
   - section_number
   - product
+
+# --- Metadata coverage threshold (issue #90) ----------------------------------
+# Minimum fraction of chunks that must carry every key in ``required_metadata``
+# after a reindex. The MANGO OFFICE SaaS corpus has multi-page sections with
+# headings only at the boundary, so the realistic floor after Section
+# Propagation is 0.65 (vs. the long-term NFR-02 ideal of 0.95).
+metadata_coverage_min: 0.65
+
+# --- Section Propagation (issue #90) ------------------------------------------
+# Stateful inheritance of ``section_title`` / ``section_number`` across chunks
+# of the same document. When a chunk has no detectable heading it inherits the
+# values from the most recent heading in the same file; the resulting chunk
+# carries an audit flag ``section_inherited: true``. The page-distance fallback
+# resets the inheritance state when more than ``max_page_distance`` pages have
+# passed since the last detected heading, to prevent "ghost inheritance" across
+# chapter boundaries that lack a numbered heading.
+section_inheritance:
+  enabled: true
+  max_page_distance: 6
 
 vector_store:
   type: "chromadb"

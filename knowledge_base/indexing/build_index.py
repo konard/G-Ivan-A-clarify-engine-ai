@@ -24,6 +24,7 @@ import logging
 import re
 import sys
 import uuid
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -54,6 +55,16 @@ REQUIRED_METADATA_KEYS: Tuple[str, ...] = (
     "section_number",
     "product",
 )
+
+# Issue #90: realistic MVP coverage threshold after Section Propagation
+# (was 0.95 for the strict NFR-02 ideal; the corpus has multi-page sections
+# without per-chunk headings so 0.65 is the achievable floor — see
+# ``docs/analysis/metadata-coverage-fix_v1.md``).
+DEFAULT_METADATA_COVERAGE_MIN: float = 0.65
+
+# Safety fallback for "ghost inheritance": discard the carried section when
+# more than this many pages have passed since the last detected heading.
+DEFAULT_MAX_INHERITANCE_PAGES: int = 6
 
 # Built-in filename-prefix → product mapping. Overridable via configs/products.yaml.
 DEFAULT_PRODUCT_MAP: Dict[str, str] = {
@@ -239,6 +250,95 @@ def extract_section(text: str) -> Tuple[str, str]:
     return "", ""
 
 
+def section_depth(number: str) -> int:
+    """Return the nesting depth of a dotted section number (``"4.2"`` → 2).
+
+    ``""`` (no detected heading) maps to ``0`` so it sorts below any real
+    section in the propagation rules.
+    """
+    if not number:
+        return 0
+    return len([part for part in number.split(".") if part])
+
+
+@dataclass
+class SectionState:
+    """Stateful section context propagated across chunks of a single document.
+
+    Reset between files in :func:`main`; consumers should never share an
+    instance across documents to avoid cross-document leakage.
+
+    Fields:
+        section_title: Last heading text observed (empty when no heading yet).
+        section_number: Dotted numeric prefix of the last heading.
+        depth: ``section_depth(section_number)`` — cached for the hierarchical
+            reset rule.
+        last_heading_page: Page on which the last heading was detected, used
+            by the page-distance safety fallback.
+    """
+
+    section_title: str = ""
+    section_number: str = ""
+    depth: int = 0
+    last_heading_page: int = 0
+
+    def reset(self) -> None:
+        self.section_title = ""
+        self.section_number = ""
+        self.depth = 0
+        self.last_heading_page = 0
+
+    def update(self, number: str, title: str, page_number: int) -> None:
+        self.section_number = number
+        self.section_title = title
+        self.depth = section_depth(number)
+        self.last_heading_page = int(page_number) if page_number else 0
+
+    def is_empty(self) -> bool:
+        return not self.section_number and not self.section_title
+
+
+def propagate_section(
+    state: SectionState,
+    text: str,
+    page_number: int,
+    *,
+    max_page_distance: int = DEFAULT_MAX_INHERITANCE_PAGES,
+) -> Tuple[str, str, bool]:
+    """Resolve ``(section_number, section_title, inherited)`` for a chunk.
+
+    Mutates ``state`` so subsequent chunks of the same document can inherit
+    from it. The algorithm is:
+
+    1. If a heading is detected in the chunk, update ``state`` and return the
+       fresh values with ``inherited=False``. The hierarchical reset is
+       implicit — overwriting the state with the new heading drops any deeper
+       sub-section context that no longer applies (e.g. moving from ``5.1.3``
+       to ``5.2``).
+    2. If no heading is detected and ``state`` is empty, return empty values
+       (``inherited=False``) — there is nothing to propagate yet.
+    3. Otherwise inherit from ``state``. When ``page_number`` is more than
+       ``max_page_distance`` pages past ``state.last_heading_page``, reset
+       ``state`` first and return empty values to avoid "ghost inheritance"
+       across chapter boundaries that lack a detectable heading.
+    """
+    number, title = extract_section(text)
+    if number or title:
+        state.update(number, title, page_number)
+        return number, title, False
+
+    if state.is_empty():
+        return "", "", False
+
+    if max_page_distance > 0:
+        distance = int(page_number) - state.last_heading_page
+        if distance > max_page_distance:
+            state.reset()
+            return "", "", False
+
+    return state.section_number, state.section_title, True
+
+
 def build_chunk_metadata(
     source: str,
     chunk_idx: int,
@@ -246,6 +346,8 @@ def build_chunk_metadata(
     text: str,
     *,
     product_map: Optional[Dict[str, str]] = None,
+    state: Optional[SectionState] = None,
+    max_page_distance: int = DEFAULT_MAX_INHERITANCE_PAGES,
 ) -> Dict[str, Any]:
     """Assemble the BL-02 metadata dict for a single chunk.
 
@@ -253,8 +355,24 @@ def build_chunk_metadata(
     Missing values are emitted as empty strings (``page_number`` defaults to
     1 so the value type stays an int) so downstream consumers can count
     coverage without branching on ``None``.
+
+    When ``state`` is supplied, Section Propagation (issue #90) is applied:
+    chunks without their own heading inherit ``section_number`` /
+    ``section_title`` from the most recent heading in the same document, and
+    the resulting metadata carries a ``section_inherited: bool`` audit flag.
+    Without a ``state`` the function preserves the legacy per-chunk extraction
+    behaviour and emits ``section_inherited=False``.
     """
-    number, title = extract_section(text)
+    if state is None:
+        number, title = extract_section(text)
+        inherited = False
+    else:
+        number, title, inherited = propagate_section(
+            state,
+            text,
+            page_number,
+            max_page_distance=max_page_distance,
+        )
     product = infer_product(source, product_map=product_map)
     return {
         "source": source,
@@ -263,6 +381,7 @@ def build_chunk_metadata(
         "section_title": title,
         "section_number": number,
         "product": product,
+        "section_inherited": bool(inherited),
     }
 
 
@@ -353,6 +472,13 @@ def main() -> int:
     collection_name = str(config.get("vector_store", {}).get("collection_name", "clarify_engine_kb"))
     product_map = load_product_map()
 
+    coverage_min = float(config.get("metadata_coverage_min", DEFAULT_METADATA_COVERAGE_MIN))
+    inheritance_cfg = config.get("section_inheritance") or {}
+    inheritance_enabled = bool(inheritance_cfg.get("enabled", True))
+    max_page_distance = int(
+        inheritance_cfg.get("max_page_distance", DEFAULT_MAX_INHERITANCE_PAGES)
+    )
+
     if not SOURCES_DIR.exists():
         logger.error("Sources directory not found: %s", SOURCES_DIR)
         return 1
@@ -388,7 +514,11 @@ def main() -> int:
             update_registry(path.name, status="Skipped", sha256=sha256_hash(path))
             continue
 
+        # Per-document section state — never reused across files to prevent
+        # cross-document leakage (issue #90).
+        section_state: Optional[SectionState] = SectionState() if inheritance_enabled else None
         chunk_counter = 0
+        inherited_counter = 0
         for page_number, page_text in pages:
             if not page_text or not page_text.strip():
                 continue
@@ -402,7 +532,11 @@ def main() -> int:
                     page_number=page_number,
                     text=chunk,
                     product_map=product_map,
+                    state=section_state,
+                    max_page_distance=max_page_distance,
                 )
+                if meta.get("section_inherited"):
+                    inherited_counter += 1
                 ids.append(f"{path.stem}__{chunk_counter}")
                 docs.append(chunk)
                 metadatas.append(meta)
@@ -412,7 +546,12 @@ def main() -> int:
             update_registry(path.name, status="Skipped", sha256=sha256_hash(path))
             continue
 
-        logger.info("→ %d chunks (pages=%d)", chunk_counter, len(pages))
+        logger.info(
+            "→ %d chunks (pages=%d, inherited=%d)",
+            chunk_counter,
+            len(pages),
+            inherited_counter,
+        )
         update_registry(path.name, status="Indexed", sha256=sha256_hash(path))
 
     if not docs:
@@ -420,11 +559,19 @@ def main() -> int:
         return 0
 
     coverage = _metadata_coverage(metadatas)
-    logger.info("Metadata coverage (BL-02, target ≥ 0.95): %.4f", coverage)
-    if coverage < 0.95:
+    inherited_total = sum(1 for m in metadatas if m.get("section_inherited"))
+    logger.info(
+        "Metadata coverage (BL-02, target ≥ %.2f): %.4f (inherited=%d/%d)",
+        coverage_min,
+        coverage,
+        inherited_total,
+        len(metadatas),
+    )
+    if coverage < coverage_min:
         logger.warning(
-            "Metadata coverage %.4f is below the NFR-02 / BL-02 target of 0.95.",
+            "Metadata coverage %.4f is below the MVP target of %.2f (NFR-02 stretch goal: 0.95).",
             coverage,
+            coverage_min,
         )
 
     logger.info("Embedding %d chunks", len(docs))

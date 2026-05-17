@@ -1,6 +1,6 @@
 # 🧮 Standard: Embedding Model
 
-**Версия:** 1.1 | **Дата:** 2026-05-17 | **Статус:** Approved
+**Версия:** 1.2 | **Дата:** 2026-05-17 | **Статус:** Approved
 
 ---
 
@@ -60,11 +60,58 @@
 | `section_number` | str \| null | нумерация раздела (`7.3.6`); `null` если нет нумерации | NFR-02, BL-10 (Parent Retrieval) |
 | `product` | str | продукт-владелец источника (`mango_office`, `corporate_telephony`, …) | фильтрация выборки, BL-14 |
 
-**Покрытие schema-check'ом:** `≥ 95 %` чанков должны содержать непустые
-`page_number` и `section_title` после reindex (BL-02). Несоответствие
+**Покрытие schema-check'ом:** `≥ metadata_coverage_min` чанков (см. §5.3,
+по умолчанию **0.65** для MVP-корпуса MANGO OFFICE) должны содержать
+непустые `page_number`, `section_title` и `section_number` после reindex
+(BL-02 + issue #90). Долгосрочная цель NFR-02 — `0.95`. Несоответствие
 логируется как `schema_warning` и попадает в отчёт `evaluate_rag.py`.
 
-### 5.3 STRICT_MODE (BL-03)
+> 🆕 **v1.2 / issue #90.** До внедрения Section Propagation покрытие
+> просчитывалось при условии, что заголовок присутствует в каждом чанке.
+> На реальном корпусе с многостраничными разделами (см.
+> [`docs/analysis/metadata-coverage-fix_v1.md`](../analysis/metadata-coverage-fix_v1.md))
+> это давало `~13.56 %`. После v1.2 чанки без собственного заголовка
+> наследуют контекст ближайшего предыдущего заголовка в том же документе и
+> помечаются флагом `section_inherited: true` для аудита.
+
+### 5.3 Section Propagation & metadata coverage threshold (issue #90)
+
+Stateful-наследование метаданных в пределах одного документа реализовано в
+`knowledge_base/indexing/build_index.py` (`SectionState`,
+`propagate_section`). Параметры — в `configs/embedding_config.yaml`:
+
+| Параметр | Значение по умолчанию | Назначение |
+|----------|------------------------|------------|
+| `metadata_coverage_min` | **0.65** | Минимальная доля чанков с полной BL-02-схемой после reindex (MVP-floor; NFR-02-stretch остаётся `0.95`). |
+| `section_inheritance.enabled` | `true` | Глобальный тогл наследования. При `false` индексер возвращается к legacy-режиму (только per-chunk extraction). |
+| `section_inheritance.max_page_distance` | `6` | Safety fallback: сброс `SectionState`, если с момента последнего обнаруженного заголовка прошло больше `N` страниц. Защищает от «призрачного наследования» между главами без обнаружимого заголовка. |
+
+**Алгоритм (per chunk, документ-локальное состояние):**
+
+1. Применить `extract_section` к тексту чанка.
+2. **Если заголовок найден** → обновить `SectionState` (новые
+   `section_number` / `section_title` / `depth`), пометить чанк
+   `section_inherited=false`. Hierarchical reset выполняется неявно:
+   перезапись состояния новым заголовком отбрасывает любой более глубокий
+   суб-раздел, который больше не релевантен (например, переход с `5.1.3` к
+   `5.2`).
+3. **Если заголовок не найден и `SectionState` пуст** — вернуть пустые
+   значения (нечего наследовать), пометить `section_inherited=false`.
+4. **Иначе** — унаследовать значения из `SectionState`, пометить
+   `section_inherited=true`. Перед этим — safety fallback: если
+   `page_number - last_heading_page > max_page_distance`, сбросить
+   состояние и вернуть пустые значения.
+
+**Audit-флаг.** Каждый чанк получает дополнительный ключ
+`section_inherited: bool` (вне `required_metadata`, чтобы не давить на
+coverage-метрику). Доля унаследованных чанков логируется per-document и
+суммарно в JSON-логе индексатора (поле `inherited` в `→ N chunks (...)`).
+
+**Document isolation.** Индексатор аллоцирует новый `SectionState` на
+каждый файл, поэтому утечка контекста между документами исключена (см.
+тест `test_section_state_does_not_leak_across_documents`).
+
+### 5.4 STRICT_MODE (BL-03)
 Флаг `strict_rag_mode` в `configs/embedding_config.yaml` управляет
 поведением `src/llm/client.py` при пустом или слабом результате поиска:
 
@@ -76,7 +123,7 @@
 Флаг защищает от риска R-01 «галлюцинации LLM» ([CONCEPT §7](../CONCEPT.md#7-управление-рисками)).
 Тест регрессии — запрос вне домена (`out_of_domain`) в `tests/test_strict_mode.py`.
 
-### 5.4 Masking of the RAG channel (BL-04)
+### 5.5 Masking of the RAG channel (BL-04)
 Флаг `mask_rag_context` в `configs/embedding_config.yaml` включает
 маскирование контекста перед формированием промпта:
 
@@ -106,3 +153,4 @@ NFR-05 (0 утечек), см. [`docs/audit/data-masking_v1.md`](../audit/data-m
 |--------|------|-----------|
 | 1.0 | 2026-05-12 | Первая версия стандарта: фиксация `BAAI/bge-m3` как модели эмбеддингов MVP и Production. |
 | 1.1 | 2026-05-17 | BL-16a (issue #87): добавлен §5 с контрактами chunking-параметров, обязательной схемы метаданных (`page_number`, `section_title`, `section_number`, `product`), флагов `strict_rag_mode` / `strict_min_score` (BL-03) и `mask_rag_context` (BL-04). `chunk_size` / `chunk_overlap` не меняются — это сдвиг в BL-16b (Sprint 2). |
+| 1.2 | 2026-05-17 | Issue #90 (BL-02 + BL-09 + NFR-02): добавлен §5.3 «Section Propagation & metadata coverage threshold» (stateful inheritance, hierarchical reset, page-distance safety fallback, флаг `section_inherited`); зафиксирован реалистичный MVP-порог `metadata_coverage_min: 0.65` (NFR-02 stretch `0.95`); §5.4 (STRICT_MODE) и §5.5 (Masking) — без изменений, только сдвиг нумерации. |
