@@ -93,13 +93,17 @@ def truncate(text: str, limit: int = CHUNK_PREVIEW_CHARS) -> str:
 
 
 # ----------------------------------------------------- cached resource loaders --
-@st.cache_resource(show_spinner="Loading retriever (embedding model + ChromaDB)…")
+@st.cache_resource(show_spinner="Loading retriever (BM25 + bge-m3 + ChromaDB)…")
 def get_retriever():
-    """Build and cache a :class:`ChromaRetriever` from the embedding config."""
-    from src.rag.retriever import ChromaRetriever
+    """Build and cache the production hybrid retriever (BL-01).
+
+    Combines BM25 lexical recall + bge-m3 dense recall with RRF fusion
+    (k=60) over the persistent ChromaDB collection.
+    """
+    from src.rag.retriever import HybridChromaRetriever
 
     try:
-        return ChromaRetriever.from_config(
+        return HybridChromaRetriever.from_config(
             config_path=str(EMBEDDING_CONFIG_PATH),
             project_root=PROJECT_ROOT,
         )
