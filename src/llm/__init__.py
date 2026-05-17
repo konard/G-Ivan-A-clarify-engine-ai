@@ -6,5 +6,22 @@ from src.llm.client import (
     LLMError,
     mask_text,
 )
+from src.llm.prompt_loader import (
+    PromptInfo,
+    PromptNotFoundError,
+    load_few_shot_examples,
+    load_prompt,
+    load_prompt_from_path,
+)
 
-__all__ = ["ClassificationResult", "LLMClient", "LLMError", "mask_text"]
+__all__ = [
+    "ClassificationResult",
+    "LLMClient",
+    "LLMError",
+    "PromptInfo",
+    "PromptNotFoundError",
+    "load_few_shot_examples",
+    "load_prompt",
+    "load_prompt_from_path",
+    "mask_text",
+]

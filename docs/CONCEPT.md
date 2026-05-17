@@ -130,6 +130,7 @@
 | **Выход** | Валидный JSON-объект `ClassificationResult` |
 | **Критерий приёмки** | Ответ соответствует схеме Pydantic (`extract_json` + `validate_payload`); для не-`НД` ответа обязательно присутствует ≥ 1 цитата; при `confidence` < 0.85 устанавливается `requires_ba_review: true`; fallback-цепочка переключает провайдера при ошибке без потери данных. |
 | **Артефакты** | `src/llm/client.py`, `src/llm/validator.py`, `prompts/system_classifier_v1.0.md`, `prompts/few_shot_examples.json`, `configs/llm_config.yaml` (блок `decoding:` — см. [`docs/standards/llm-behavior.md`](standards/llm-behavior.md)), `configs/classification_rules.json` |
+| **Артефакты** | `src/llm/client.py`, `src/llm/validator.py`, `src/llm/prompt_loader.py`, `prompts/system_classifier_v1.0.md`, `prompts/few_shot_examples_v1.0.json`, `configs/llm_config.yaml`, `configs/classification_rules.json` |
 
 ### FR-05. Маскирование чувствительных данных
 | Поле | Значение |
@@ -191,6 +192,8 @@
 | **NFR-08** | Доступность сервиса | ≥ 99 % на этапе Пилот при доступности хотя бы одного из 2 LLM-провайдеров | Healthcheck fallback-цепочки, мониторинг latency и retries | планируется на этапе Пилот |
 | **NFR-09** | Безопасность загрузки | Лимит размера файла UI ≤ 10 МБ, лимит количества требований ≤ N | `st.set_option("server.maxUploadSize", 10)`, валидация в `src/app.py` | `src/app.py` |
 
+> **Примечание (MVP/Пилот, issue #89):** Для этапов MVP и Пилота допускается использование зарубежных LLM-API (OpenRouter) в режиме `use_test_data_mode: true` при условии обязательного маскирования чувствительных данных (BL-04, BL-23). Приоритет провайдеров на MVP: OpenRouter (free tier, `allowed_for_production: false`) → GigaChat → DeepSeek. Возврат к 100% RU-резидентности — критерий перехода в Production (NFR-04).
+
 **Параметры обработки данных** (зафиксированы как стандарты, см. [`docs/standards/embedding-model.md`](standards/embedding-model.md)):
 - Чанкинг: 200–300 токенов, overlap 50.
 - Модель эмбеддингов: `BAAI/bge-m3` (1024 dim, multilingual, локальное исполнение).
@@ -212,7 +215,7 @@
 6. **LLM-классификатор** — fallback-цепочка из 2 провайдеров со строгим JSON-выводом (FR-04).
 7. **Валидатор** — извлечение и валидация JSON-ответа по Pydantic-схеме (FR-04).
 8. **Экспортёр** — добавление колонок результата в исходный файл (FR-06).
-9. **UI** — Streamlit с двумя вкладками (FR-07).
+9. **UI** — Streamlit: основное приложение `src/app.py` с двумя вкладками (FR-07) и KB-тестовый UI `src/ui/app.py` с двумя режимами работы — «Анализ ТЗ» (stateless) и «Консультация» (stateful, история ≤ 6 сообщений), см. §6.8 и [`docs/ADR/004-ui-operation-modes.md`](ADR/004-ui-operation-modes.md).
 10. **Логгер** — JSON-логи с `run_id` и метаданными (FR-08).
 
 ### 6.3. Поток данных
@@ -243,9 +246,25 @@
 Подробности — в [`docs/ADR/001-rag-architecture.md`](ADR/001-rag-architecture.md) (раздел Decision) и `configs/llm_config.yaml`.
 
 ### 6.5. Промпт-менеджмент
-- Системный промпт хранится как версионируемый артефакт: `prompts/system_classifier_v1.0.md`.
-- Few-shot примеры — `prompts/few_shot_examples.json` (целевой объём 3–5 примеров, обязательно покрывающие все 4 категории).
-- История изменений — `prompts/prompt_changelog.md`.
+- Все системные и few-shot-промпты хранятся в каталоге `prompts/` как
+  версионируемые артефакты по конвенции `<name>_v<MAJOR>.<MINOR>.<ext>`:
+  - `prompts/system_classifier_v1.0.md` — RAG-классификатор требований
+    (`LLMClient.classify_requirement`).
+  - `prompts/system_rag_v1.0.md` — free-text KB Q&A в Streamlit-UI
+    (`LLMClient.generate_rag_response`).
+  - `prompts/few_shot_examples_v1.0.json` — калибровочные примеры
+    (целевой объём 3–5 примеров, обязательно покрывающие все 4 категории).
+- Загрузка идёт через единый модуль `src/llm/prompt_loader.py`
+  (BL-08, issue #94). Он вычисляет SHA-256 содержимого и пишет
+  `INFO`-запись в JSON-лог с полями `prompt_name`, `prompt_version`,
+  `prompt_sha256`, `run_id` — это закрывает audit-требование BL-23.
+- В `LLMClient` сохранён минимальный inline-fallback на случай
+  broken install; реальный источник правды — файлы в `prompts/`.
+  Публичные сигнатуры `LLMClient.classify_requirement` /
+  `generate_rag_response` не меняются.
+- История изменений и SHA-256 хеши — [`prompts/prompt_changelog.md`](../prompts/prompt_changelog.md).
+- Архитектурное решение и DoD при добавлении новой версии —
+  [`docs/ADR/004-prompt-management.md`](ADR/004-prompt-management.md).
 - Владелец — Prompt Owner ([`docs/standards/roles.md`](standards/roles.md), раздел 2.3).
 
 ### 6.6. Конфигурация (нет хардкода)
@@ -281,6 +300,27 @@
 - Каждая попытка вызова LLM (включая повторы и переключения провайдера) пишется отдельной JSON-записью с полями: `run_id`, `requirement_id`, `provider`, `attempt_number`, `error_class`, `latency_ms`, `outcome` (`success` / `retry` / `fallback` / `final_failure`).
 - По `run_id` восстанавливается полная трассировка инцидента — какие провайдеры были опрошены, в какой момент произошёл переход на fallback, чем закончилась цепочка.
 - Логи доступны для разбора эксплуатационной командой (см. будущий runbook `llm-failure.md`, [`docs/runbooks/`](runbooks/)).
+
+### 6.8. Режимы работы UI (BL-07, issue #93)
+
+KB-тестовый UI (`src/ui/app.py`) поддерживает два режима, переключаемые через `st.sidebar.radio`:
+
+1. **📊 Анализ ТЗ — stateless.** Каждый запрос формирует один промпт без истории; `st.session_state.messages` очищается. Поведение и токен-стоимость идентичны pre-BL-07 baseline — нужно для массовой проверки требований ТЗ без неконтролируемого роста расхода токенов (NFR-06).
+2. **💬 Консультация — stateful.** `st.session_state.messages` сохраняет диалог; **жёсткий лимит** `ui.max_history_messages` (по умолчанию `6`) ограничивает число прошлых сообщений, передаваемых в промпт. Лимит применяется **до** и **после** вызова LLM (двухслойная защита от разрастания и промпта, и буфера состояния). История инлайнится в `<history>`-блок промпта (`Пользователь:` / `Ассистент:`), сигнатура `LLMClient.generate_rag_response()` не меняется — это требование DoD issue #93. Кнопка «🧹 Очистить историю» в сайдбаре сбрасывает буфер.
+
+**Сброс при смене режима.** Любой переход «Анализ ↔ Консультация» автоматически очищает `st.session_state.messages` (`_ensure_mode_state`), чтобы накопленный консультационный контекст не утекал в дешёвые stateless-прогоны.
+
+**Логирование размера промпта.** На каждый вызов в JSON-лог пишется строка `ui_prompt_built mode=… history_messages=… approx_tokens=…` (грубая оценка `len(prompt) // 4` — реальный токенайзер живёт на стороне провайдера, но тренд и относительный эффект урезания истории видны).
+
+**Конфигурация:**
+
+```yaml
+# configs/llm_config.yaml
+ui:
+  max_history_messages: 6
+```
+
+Подробнее — [`docs/ADR/004-ui-operation-modes.md`](ADR/004-ui-operation-modes.md).
 
 ---
 
