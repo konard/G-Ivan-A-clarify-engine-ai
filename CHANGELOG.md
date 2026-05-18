@@ -7,6 +7,13 @@
 ## [Unreleased]
 
 ### Added
+- **BL-12 (issue #124):** Query Expansion для режима «Консультация»:
+  `QueryExpansionRetriever` генерирует 3–4 семантические переформулировки
+  через `prompts/system_rag_query_expansion_v1.md`, выполняет retrieval по
+  вариантам запроса и объединяет хиты через RRF с дедупликацией. Флаги
+  `rag.query_expansion_enabled: false` и `rag.expansion_count: 3` добавлены
+  в `configs/embedding_config.yaml`; graceful fallback возвращает результаты
+  исходного запроса при сбое LLM или невалидном JSON.
 - **BL-25 (issue #122):** конфигурируемый блок `providers.ollama` в
   `configs/llm_config.yaml` с `${OLLAMA_*:default}` placeholders для
   `model`, `base_url`, `timeout_seconds` и локальными `options`
