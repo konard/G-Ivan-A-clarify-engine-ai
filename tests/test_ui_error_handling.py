@@ -115,7 +115,7 @@ def test_retrieve_and_answer_records_generic_error_and_retry_state(monkeypatch) 
     monkeypatch.setattr(
         app,
         "search_kb",
-        lambda _query, _top_k: [{"source": "doc.pdf", "text": "context"}],
+        lambda _query, _top_k, **_kwargs: [{"source": "doc.pdf", "text": "context"}],
     )
     monkeypatch.setattr(app, "get_llm_client", lambda: FailingClient())
     monkeypatch.setattr(app, "get_rag_system_prompt", lambda: "system")

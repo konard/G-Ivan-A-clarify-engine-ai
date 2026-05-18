@@ -37,6 +37,9 @@ def test_required_metadata_keys_include_section_audit_flag() -> None:
         "section_number",
         "product",
         "section_inherited",
+        "parent_id",
+        "section_id",
+        "parent_text",
     )
 
 

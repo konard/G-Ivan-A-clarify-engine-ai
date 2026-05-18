@@ -28,6 +28,8 @@ section_aware_chunking: true
 # window. rrf_k=60 is the Reciprocal Rank Fusion constant per ADR-001 §4.2.
 top_k: 5
 rrf_k: 60
+use_parent_context: false
+parent_context_max_chars: 6000
 
 # --- STRICT_MODE (BL-03, BL-16a, CONCEPT §7 R-01) -----------------------------
 # When `strict_rag_mode: true`, the LLM call is skipped if the retriever

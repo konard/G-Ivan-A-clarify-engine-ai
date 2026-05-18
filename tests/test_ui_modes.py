@@ -308,4 +308,34 @@ def test_mode_constants_match_issue_spec() -> None:
     assert app.MODE_LABELS[app.MODE_STATELESS] == "📊 Анализ ТЗ"
     assert app.MODE_LABELS[app.MODE_CONSULTATION] == "💬 Консультация по документации"
     assert app.MODE_ORDER == [app.MODE_STATELESS, app.MODE_CONSULTATION]
+
+
+def test_retrieve_and_answer_enables_parent_context_for_consultation(monkeypatch) -> None:
+    captured = {}
+
+    class _Client:
+        def generate_rag_response(self, *_args, **_kwargs):
+            return "answer"
+
+    def _search(query, top_k, *, use_parent_context=False):
+        captured["use_parent_context"] = use_parent_context
+        return [{"source": "doc.md", "text": "context", "score": 1.0}]
+
+    monkeypatch.setattr(app, "search_kb", _search)
+    monkeypatch.setattr(app, "get_llm_client", lambda: _Client())
+    monkeypatch.setattr(app, "get_rag_system_prompt", lambda: "system")
+    monkeypatch.setattr(app, "_safe_log_prompt_built", lambda **_kwargs: None)
+
+    answer, chunks, prompt = app._retrieve_and_answer(
+        query="Q",
+        top_k=5,
+        history=[],
+        mode=app.MODE_CONSULTATION,
+        run_id="run",
+    )
+
+    assert answer == "answer"
+    assert chunks
+    assert "<context>" in prompt
+    assert captured["use_parent_context"] is True
     assert app.DEFAULT_MAX_HISTORY_MESSAGES == 6

@@ -103,7 +103,11 @@ SAMPLE_DOCS = [
     {
         "text": "Внутренняя CRM поддерживает коннектор Битрикс24 с синхронизацией контактов через REST API.",
         "source": "crm.md",
-        "metadata": {"section": "Раздел 4.2"},
+        "metadata": {
+            "section": "Раздел 4.2",
+            "parent_id": "crm.md::4.2::CRM",
+            "parent_text": "Полный раздел CRM: синхронизация контактов, сделки и REST API.",
+        },
     },
     {
         "text": "Запись звонков и расшифровка STT доступны в постобработке.",
@@ -188,3 +192,30 @@ def test_hybrid_chroma_search_logs_fusion_breakdown(caplog) -> None:
     assert "fused=" in message
     assert "rrf_k=60" in message
     assert "top_k=2" in message
+
+
+def test_hybrid_chroma_parent_context_groups_child_hits() -> None:
+    docs = [
+        {
+            "text": "REST API поддерживает синхронизацию контактов.",
+            "source": "crm.md",
+            "metadata": {
+                "parent_id": "crm.md::4.2::CRM",
+                "parent_text": "Полный раздел CRM: контакты, компании, сделки и REST API.",
+            },
+        },
+        {
+            "text": "REST API поддерживает синхронизацию сделок.",
+            "source": "crm.md",
+            "metadata": {
+                "parent_id": "crm.md::4.2::CRM",
+                "parent_text": "Полный раздел CRM: контакты, компании, сделки и REST API.",
+            },
+        },
+    ]
+    retriever = _retriever_with_docs(docs, top_k=2)
+    results = retriever.search("REST API синхронизация", top_k=2, use_parent_context=True)
+    assert len(results) == 1
+    assert results[0]["text"] == "Полный раздел CRM: контакты, компании, сделки и REST API."
+    assert results[0]["metadata"]["parent_context"] is True
+    assert len(results[0]["child_chunks"]) == 2

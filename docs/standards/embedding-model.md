@@ -1,6 +1,6 @@
 # 🧮 Standard: Embedding Model
 
-**Версия:** 1.3 | **Дата:** 2026-05-17 | **Статус:** Approved
+**Версия:** 1.4 | **Дата:** 2026-05-18 | **Статус:** Approved
 
 ---
 
@@ -35,6 +35,7 @@
 (BL-06, issue #92) перевела `chunk_size`/`chunk_overlap` на L1-параметры
 `512 / 64` и расширила guardrails; версия 1.3 (BL-02 hardening, issue #109)
 добавляет section propagation и реалистичный MVP-порог покрытия `0.65`.
+Версия 1.4 (BL-10, issue #118) добавляет Parent Document Retrieval (L2).
 
 ### 5.1 Chunking parameters (Sprint 2, BL-06 L1)
 | Параметр | Значение | Источник | Комментарий |
@@ -65,6 +66,9 @@
 | `section_number` | str \| null | нумерация раздела (`7.3.6`); `null` если нет нумерации | NFR-02, BL-10 (Parent Retrieval) |
 | `product` | str | продукт-владелец источника (`mango_office`, `corporate_telephony`, …) | фильтрация выборки, BL-14 |
 | `section_inherited` | bool | `true`, если `section_title` / `section_number` унаследованы от предыдущего заголовка | audit, schema debug |
+| `parent_id` | str | стабильный идентификатор родительского раздела (`source::section_number::section_title`) | BL-10 L2 grouping |
+| `section_id` | str | алиас `parent_id` для совместимости с section-level consumers | BL-10 L2 grouping |
+| `parent_text` | str | полный текст родительского раздела, собранный из L1-чанков | BL-10 LLM context |
 
 Дополнительное поле `section_fallback` может присутствовать в metadata для
 аудита fallback-стратегии (`none`, `source_filename`). Оно не входит в
@@ -124,6 +128,19 @@
 синтетическими данными. Контракт привязан к NFR-04 (резидентность данных) и
 NFR-05 (0 утечек), см. [`docs/audit/data-masking_v1.md`](../audit/data-masking_v1.md) §3.
 
+### 5.6 Parent Document Retrieval (BL-10 L2)
+По умолчанию `use_parent_context: false`, чтобы сохранить контракт L1-поиска.
+В режиме «Консультация» UI включает L2-контекст явно:
+
+| Флаг | Значение по умолчанию | Поведение |
+|------|------------------------|-----------|
+| `use_parent_context` | `false` | Ретривер ранжирует L1-чанки, затем при включении группирует их по `parent_id` и возвращает `parent_text`. |
+| `parent_context_max_chars` | `6000` | Верхняя граница длины одного родительского контекста перед передачей в LLM. |
+
+При отсутствии `parent_text` ретривер использует исходный child chunk, поэтому
+старые индексы не ломаются. Для получения полноценного L2-контекста требуется
+полный reindex.
+
 ## 6. Operational Notes
 - Конфигурация модели задаётся в `configs/` (имя модели, размерность, устройство исполнения) и не требует изменения кода RAG-пайплайна.
 - Любая смена модели сопровождается обновлением этого файла (увеличение версии) и заметкой в `CHANGELOG.md`.
@@ -144,3 +161,4 @@ NFR-05 (0 утечек), см. [`docs/audit/data-masking_v1.md`](../audit/data-m
 | 1.1 | 2026-05-17 | BL-16a (issue #87): добавлен §5 с контрактами chunking-параметров, обязательной схемы метаданных (`page_number`, `section_title`, `section_number`, `product`), флагов `strict_rag_mode` / `strict_min_score` (BL-03) и `mask_rag_context` (BL-04). `chunk_size` / `chunk_overlap` не меняются — это сдвиг в BL-16b (Sprint 2). |
 | 1.2 | 2026-05-17 | BL-06 (issue #92): `chunk_size` поднят с 250 до **512**, `chunk_overlap` — с 50 до **64**, guardrails расширены до 384–768 ток. Включён section-aware splitter (`section_aware_chunking: true`). **BREAKING CHANGE** для существующего индекса ChromaDB — требуется полный reindex после мерджа. |
 | 1.3 | 2026-05-17 | BL-02 hardening (issue #109): добавлены `section_inherited`, section propagation с page-distance reset, fallback по имени документа и MVP-порог `metadata_coverage_min: 0.65`. |
+| 1.4 | 2026-05-18 | BL-10 (issue #118): добавлены `parent_id`, `section_id`, `parent_text`, флаги `use_parent_context` / `parent_context_max_chars` и L2 Parent Document Retrieval для режима «Консультация». |

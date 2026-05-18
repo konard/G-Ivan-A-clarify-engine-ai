@@ -10,6 +10,14 @@
 - **BL-06 (issue #92): `chunk_size` поднят с 250 до 512, `chunk_overlap` — с 50 до 64.** Изменение размера окна меняет структуру индекса ChromaDB — после мерджа владелец задачи выполняет полный reindex (`python knowledge_base/indexing/build_index.py`) и прогоняет Golden Set (BL-05). Старая коллекция `clarify_engine_kb` несовместима с новыми параметрами; её необходимо пересоздать.
 
 ### Added
+- **MINOR: Parent Document Retrieval L2 (BL-10, issue #118).**
+  Индексатор сохраняет `parent_id` / `section_id` / `parent_text` для L1-чанков,
+  `HybridRetriever` и `HybridChromaRetriever` поддерживают opt-in
+  `use_parent_context`, а режим «Консультация» в KB UI передаёт в LLM
+  сгруппированный родительский контекст с лимитом `parent_context_max_chars`.
+  ADR — [`docs/ADR/009-parent-document-retrieval.md`](docs/ADR/009-parent-document-retrieval.md);
+  тесты — `tests/test_retriever.py`, `tests/test_hybrid_chroma_retriever.py`,
+  `tests/test_build_index.py`, `tests/test_ui_modes.py`.
 - **MINOR: audit trail with run_id tracing & BL-04 compliance (BL-23, issue #103).**
   `src/llm/client.py` creates a 12-hex per-request `run_id` for
   `classify_requirement()` and `generate_rag_response()`, preserves it through
