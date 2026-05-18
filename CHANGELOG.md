@@ -16,6 +16,10 @@
   Документация обновлена в `README.md`, `.env.example` и
   `docs/standards/llm-behavior.md`; регресс-тест —
   `tests/test_llm_client.py::test_ollama_config_loading`.
+- **PATCH: dependency hardening (BL-24a, issue #120).** Добавлен
+  `torchvision>=0.18.0` в `requirements.txt`, чтобы optional vision-backends
+  из `transformers` не засоряли Streamlit-логи `ModuleNotFoundError` при
+  чистой установке зависимостей.
 
 ## [0.2.0] - 2026-05-18
 
