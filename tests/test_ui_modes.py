@@ -167,6 +167,35 @@ def test_shipped_llm_config_multi_hop_defaults_to_disabled() -> None:
     assert settings["enabled"] is False
 
 
+def test_search_vector_store_passes_query_arguments(monkeypatch) -> None:
+    captured = {}
+    chunks = [{"source": "doc.md", "text": "context", "score": 1.0}]
+
+    class _Retriever:
+        collection_name = "kb"
+        persist_directory = "/tmp/chroma"
+        config = {"query_expansion": {"enabled": False}}
+
+        def search(self, query, *, top_k, use_parent_context=False):
+            captured["query"] = query
+            captured["top_k"] = top_k
+            captured["use_parent_context"] = use_parent_context
+            return chunks
+
+    monkeypatch.setattr("src.rag.retriever.build_retriever", lambda: _Retriever())
+
+    assert app.search_vector_store(
+        "Как настроить SIP?",
+        top_k=3,
+        use_parent_context=True,
+    ) == chunks
+    assert captured == {
+        "query": "Как настроить SIP?",
+        "top_k": 3,
+        "use_parent_context": True,
+    }
+
+
 # ---------------------------------------------------------------- trim_history --
 def test_trim_history_keeps_last_n_messages() -> None:
     msgs = [{"role": "user", "content": str(i)} for i in range(10)]

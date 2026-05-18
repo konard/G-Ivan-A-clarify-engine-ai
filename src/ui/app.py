@@ -266,14 +266,13 @@ def get_rag_reflection_prompt() -> str:
 
 
 # ----------------------------------------------------------------- retrieval --
-def search_kb(
+def search_vector_store(
     query: str,
     top_k: int,
-    *,
-    use_parent_context: bool = False,
     ui_mode: str = MODE_STATELESS,
     llm_config: Optional[Dict[str, Any]] = None,
     enable_query_expansion: bool = False,
+    use_parent_context: bool = False,
 ) -> List[Dict[str, Any]]:
     """Run retrieval wrappers and return ranked KB context chunks.
 
@@ -283,7 +282,11 @@ def search_kb(
     """
     from src.rag.retriever import ParentAwareRetriever
 
-    base_retriever = get_retriever()
+    # --- Imports ---
+    from src.rag.retriever import build_retriever
+    
+    # --- Base Retriever ---
+    base_retriever = build_retriever()
     active_retriever = base_retriever
 
     multi_hop = resolve_multi_hop_settings(llm_config, ui_mode)
@@ -323,6 +326,8 @@ def search_kb(
                 prompts_dir=PROJECT_ROOT / "prompts",
             )
 
+    # --- Execution ---
+    # Active retriever is now either Base, Iterative, or QueryExpansion(Iterative(Base))
     if use_parent_context:
         active_retriever = ParentAwareRetriever(
             active_retriever,
@@ -344,32 +349,14 @@ def search_kb(
         collection_name = getattr(base_retriever, "collection_name", "unknown")
         persist_directory = getattr(base_retriever, "persist_directory", "unknown")
         raise KBError(
-            f"Collection '{collection_name}' at "
-            f"'{persist_directory}' returned no results. Make sure "
+            f"Collection '{base_retriever.collection_name}' at "
+            f"'{base_retriever.persist_directory}' returned no results. Make sure "
             "the index is built: `python knowledge_base/indexing/build_index.py`."
         )
     return chunks
 
-
-def search_vector_store(
-    query: str,
-    top_k: int,
-    *,
-    use_parent_context: bool = False,
-    ui_mode: str = MODE_STATELESS,
-    llm_config: Optional[Dict[str, Any]] = None,
-    enable_query_expansion: bool = False,
-) -> List[Dict[str, Any]]:
-    """Backward-compatible alias for older UI/tests."""
-    return search_kb(
-        query,
-        top_k,
-        use_parent_context=use_parent_context,
-        ui_mode=ui_mode,
-        llm_config=llm_config,
-        enable_query_expansion=enable_query_expansion,
-    )
-
+# Backward-compatible alias for older UI/tests.
+search_kb = search_vector_store
 
 # ------------------------------------------------------------- BL-09 citations --
 def build_citation_link(
