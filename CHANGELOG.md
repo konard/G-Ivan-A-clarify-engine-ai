@@ -14,6 +14,15 @@
   `rag.query_expansion_enabled: false` и `rag.expansion_count: 3` добавлены
   в `configs/embedding_config.yaml`; graceful fallback возвращает результаты
   исходного запроса при сбое LLM или невалидном JSON.
+- **BL-25 (issue #122):** конфигурируемый блок `providers.ollama` в
+  `configs/llm_config.yaml` с `${OLLAMA_*:default}` placeholders для
+  `model`, `base_url`, `timeout_seconds` и локальными `options`
+  (`num_ctx`, `num_thread`, `keep_alive`, `temperature`). `LLMClient`
+  применяет YAML/env значения и централизованный `decoding:` к Ollama
+  RAG-вызовам; дефолтный timeout повышен до 180 секунд для CPU-only АРМ.
+  Документация обновлена в `README.md`, `.env.example` и
+  `docs/standards/llm-behavior.md`; регресс-тест —
+  `tests/test_llm_client.py::test_ollama_config_loading`.
 - **PATCH: dependency hardening (BL-24a, issue #120).** Добавлен
   `torchvision>=0.18.0` в `requirements.txt`, чтобы optional vision-backends
   из `transformers` не засоряли Streamlit-логи `ModuleNotFoundError` при
