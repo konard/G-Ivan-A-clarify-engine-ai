@@ -266,18 +266,23 @@ def get_rag_reflection_prompt() -> str:
 
 
 # ----------------------------------------------------------------- retrieval --
-def search_kb(
-    query: str,
-    top_k: int,
-    *,
-    use_parent_context: bool = False,
+def search_vector_store(
     ui_mode: str = MODE_STATELESS,
     llm_config: Optional[Dict[str, Any]] = None,
+    enable_query_expansion: bool = False,
 ) -> List[Dict[str, Any]]:
     """Run a vector search and return chunk dicts ordered by similarity."""
-    retriever = get_retriever()
+
+    # --- Imports ---
+    from src.rag.retriever import get_retriever
+    
+    # --- Base Retriever ---
+    base_retriever = get_retriever()
+    active_retriever = base_retriever
+
+    # --- Layer 1: Multi-hop Retrieval (Inner Wrapper) ---
+    # Срабатывает внутри поиска (Reflection)
     multi_hop = resolve_multi_hop_settings(llm_config, ui_mode)
-    active_retriever = retriever
     if multi_hop["enabled"]:
         from src.rag.retriever import IterativeRetriever
 
@@ -289,12 +294,33 @@ def search_kb(
             )
 
         active_retriever = IterativeRetriever(
-            retriever,
+            active_retriever,
             reflection_call=_reflection_call,
             max_hops=int(multi_hop["max_hops"]),
             min_confidence_to_stop=float(multi_hop["min_confidence_to_stop"]),
         )
 
+    # --- Layer 2: Query Expansion (Outer Wrapper) ---
+    # Срабатывает до поиска (Expansion)
+    if enable_query_expansion:
+        from src.rag.query_expansion import QueryExpansionRetriever, QueryExpansionConfig
+        from src.rag.retriever import load_embedding_config
+
+        expansion_config = getattr(base_retriever, "config", None)
+        if not isinstance(expansion_config, dict):
+            expansion_config = load_embedding_config(str(EMBEDDING_CONFIG_PATH))
+        
+        if QueryExpansionConfig.from_mapping(expansion_config).enabled:
+            active_retriever = QueryExpansionRetriever(
+                active_retriever,
+                get_llm_client(),
+                config=expansion_config,
+                prompts_dir=PROJECT_ROOT / "prompts",
+            )
+
+    # --- Execution ---
+    # Active retriever is now either Base, Iterative, or QueryExpansion(Iterative(Base))
+    return active_retriever.search()
     try:
         chunks = active_retriever.search(
             query,
@@ -1275,6 +1301,7 @@ def _retrieve_and_answer(
                 use_parent_context=(mode == MODE_CONSULTATION),
                 ui_mode=mode,
                 llm_config=llm_config,
+                enable_query_expansion=(mode == MODE_CONSULTATION),
             )
     except _generation_error_types() as exc:
         _store_generation_error(
@@ -1294,7 +1321,6 @@ def _retrieve_and_answer(
             provider="knowledge_base",
         )
         return None, [], ""
-
     prompt = build_user_prompt(query, chunks, history=history)
     prompt_tokens = estimate_token_count(prompt)
     history_msgs = len(history) if history else 0

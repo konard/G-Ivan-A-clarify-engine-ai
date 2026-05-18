@@ -374,6 +374,10 @@ def test_retrieve_and_answer_enables_parent_context_for_consultation(monkeypatch
         captured["multi_hop"] = app.resolve_multi_hop_settings(
             llm_config or {}, ui_mode
         )["enabled"]
+        enable_query_expansion=False,
+    ):
+        captured["use_parent_context"] = use_parent_context
+        captured["enable_query_expansion"] = enable_query_expansion
         return [{"source": "doc.md", "text": "context", "score": 1.0}]
 
     monkeypatch.setattr(app, "search_kb", _search)
@@ -404,6 +408,11 @@ def test_retrieve_and_answer_enables_parent_context_for_consultation(monkeypatch
 
 
 def test_retrieve_and_answer_ignores_multi_hop_in_analysis_mode(monkeypatch) -> None:
+    assert captured["enable_query_expansion"] is True
+    assert app.DEFAULT_MAX_HISTORY_MESSAGES == 6
+
+
+def test_retrieve_and_answer_keeps_query_expansion_off_for_stateless(monkeypatch) -> None:
     captured = {}
 
     class _Client:
@@ -431,6 +440,13 @@ def test_retrieve_and_answer_ignores_multi_hop_in_analysis_mode(monkeypatch) -> 
         "load_llm_config",
         lambda: {"rag": {"multi_hop_enabled": True}},
     )
+        enable_query_expansion=False,
+    ):
+        captured["use_parent_context"] = use_parent_context
+        captured["enable_query_expansion"] = enable_query_expansion
+        return [{"source": "doc.md", "text": "context", "score": 1.0}]
+
+    monkeypatch.setattr(app, "search_kb", _search)
     monkeypatch.setattr(app, "get_llm_client", lambda: _Client())
     monkeypatch.setattr(app, "get_rag_system_prompt", lambda: "system")
     monkeypatch.setattr(app, "_safe_log_prompt_built", lambda **_kwargs: None)
@@ -449,3 +465,6 @@ def test_retrieve_and_answer_ignores_multi_hop_in_analysis_mode(monkeypatch) -> 
     assert captured["use_parent_context"] is False
     assert captured["ui_mode"] == app.MODE_STATELESS
     assert captured["multi_hop"] is False
+    assert "<context>" in prompt
+    assert captured["use_parent_context"] is False
+    assert captured["enable_query_expansion"] is False

@@ -6,6 +6,11 @@
 
 ## [Unreleased]
 
+### Fixed
+- **PATCH: Windows UTF-8 config compatibility (BL-26, issue #125).**
+  YAML/Markdown/Python text attributes are pinned to UTF-8/LF and regression
+  tests verify config loaders read YAML with explicit `encoding="utf-8"` so
+  Russian Windows `cp1251` locales do not trigger `UnicodeDecodeError`.
 ### Added
 - **MINOR: Multi-hop Retrieval for Consultation mode (BL-11, issue #123).**
   `configs/llm_config.yaml` now exposes `rag.multi_hop_enabled: false`,
@@ -20,6 +25,13 @@
   `{sufficient, follow_up, confidence}`. Tests:
   `tests/test_iterative_retriever.py`, `tests/test_ui_modes.py`,
   `tests/test_prompt_loader.py`.
+- **BL-12 (issue #124):** Query Expansion для режима «Консультация»:
+  `QueryExpansionRetriever` генерирует 3–4 семантические переформулировки
+  через `prompts/system_rag_query_expansion_v1.md`, выполняет retrieval по
+  вариантам запроса и объединяет хиты через RRF с дедупликацией. Флаги
+  `rag.query_expansion_enabled: false` и `rag.expansion_count: 3` добавлены
+  в `configs/embedding_config.yaml`; graceful fallback возвращает результаты
+  исходного запроса при сбое LLM или невалидном JSON.
 - **BL-25 (issue #122):** конфигурируемый блок `providers.ollama` в
   `configs/llm_config.yaml` с `${OLLAMA_*:default}` placeholders для
   `model`, `base_url`, `timeout_seconds` и локальными `options`

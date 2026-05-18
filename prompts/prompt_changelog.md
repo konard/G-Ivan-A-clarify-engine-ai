@@ -24,6 +24,11 @@
 | Version | Date       | Author | SHA-256 (hex)                                                      | Changes                                                                                                                      |
 |---------|------------|--------|---------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | v1.0    | 2026-05-18 | konard | `7b5541188306f089f4fbd2c0f263abb4d95731fe8bb63c3d638b83bf8132d9ed` | Initial BL-11 reflection prompt. Requires strict JSON with `sufficient`, `follow_up`, and `confidence`; forbids answering. |
+## system_rag_query_expansion (переформулировки запроса)
+
+| Version | Date       | Author | SHA-256 (hex)                                                      | Changes                                                                 |
+|---------|------------|--------|---------------------------------------------------------------------|-------------------------------------------------------------------------|
+| v1      | 2026-05-18 | konard | `b26532713ae9623e7b7ba7207282fdb8b214b164d4807869b6f6b2aeb047cb98` | Initial release. Strict JSON array with 3–4 semantic query rewrites.    |
 
 ## few_shot_examples (калибровочные кейсы для classifier)
 
