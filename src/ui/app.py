@@ -227,11 +227,20 @@ def get_rag_system_prompt() -> str:
 
 
 # ----------------------------------------------------------------- retrieval --
-def search_kb(query: str, top_k: int) -> List[Dict[str, Any]]:
+def search_kb(
+    query: str,
+    top_k: int,
+    *,
+    use_parent_context: bool = False,
+) -> List[Dict[str, Any]]:
     """Run a vector search and return chunk dicts ordered by similarity."""
     retriever = get_retriever()
     try:
-        chunks = retriever.search(query, top_k=top_k)
+        chunks = retriever.search(
+            query,
+            top_k=top_k,
+            use_parent_context=use_parent_context,
+        )
     except Exception as exc:  # noqa: BLE001
         raise KBError(f"ChromaDB query failed: {exc}") from exc
     if not chunks:
@@ -1103,7 +1112,11 @@ def _retrieve_and_answer(
 
     try:
         with st.spinner("Searching knowledge base…"):
-            chunks = search_kb(query, top_k)
+            chunks = search_kb(
+                query,
+                top_k,
+                use_parent_context=(mode == MODE_CONSULTATION),
+            )
     except _generation_error_types() as exc:
         _store_generation_error(
             query=query,

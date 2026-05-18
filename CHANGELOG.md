@@ -14,6 +14,101 @@
 - **BL-06** (#92): Переход на `chunk_size=512`, `chunk_overlap=64` и section-aware splitting. Требуется полная переиндексация базы знаний: удалить старую ChromaDB-коллекцию и выполнить `python knowledge_base/indexing/build_index.py`.
 
 ### Added
+- **MINOR: Parent Document Retrieval L2 (BL-10, issue #118).**
+  Индексатор сохраняет `parent_id` / `section_id` / `parent_text` для L1-чанков,
+  `HybridRetriever` и `HybridChromaRetriever` поддерживают opt-in
+  `use_parent_context`, а режим «Консультация» в KB UI передаёт в LLM
+  сгруппированный родительский контекст с лимитом `parent_context_max_chars`.
+  ADR — [`docs/ADR/009-parent-document-retrieval.md`](docs/ADR/009-parent-document-retrieval.md);
+  тесты — `tests/test_retriever.py`, `tests/test_hybrid_chroma_retriever.py`,
+  `tests/test_build_index.py`, `tests/test_ui_modes.py`.
+- **MINOR: audit trail with run_id tracing & BL-04 compliance (BL-23, issue #103).**
+  `src/llm/client.py` creates a 12-hex per-request `run_id` for
+  `classify_requirement()` and `generate_rag_response()`, preserves it through
+  provider fallback via provider config, and emits masked structured
+  `LLM_REQUEST` / `LLM_RESPONSE` records with provider, decoding params,
+  prompt version/hash, response status, and latency. Logger failures are
+  best-effort and do not interrupt the main LLM request. ADR:
+  [`docs/ADR/005-audit-trail.md`](docs/ADR/005-audit-trail.md); tests:
+  `tests/test_audit_trail.py`.
+- **MINOR: graceful error handling & retry UX (BL-13, issue #106).**
+  KB-тестовый UI (`src/ui/app.py`) теперь обрабатывает сбои ретривера и LLM
+  без сырых traceback в интерфейсе: запрос сохраняется в
+  `st.session_state["last_query"]`, кнопка «Повторить» переиспользует это
+  значение, во время queued generation поля ввода блокируются, а ошибка
+  рендерится отдельным `st.error("Не удалось получить ответ.")` без
+  фейкового RAG-ответа. UI-логи `ui_prompt_built` /
+  `ui_generation_failed` несут `run_id`, `error_type`, `provider` и
+  изолированы `try/except`, чтобы сбой логирования не ронял Streamlit.
+  ADR — [`docs/ADR/007-error-handling.md`](docs/ADR/007-error-handling.md);
+  тесты — `tests/test_ui_error_handling.py`.
+- **MINOR: evaluation script for RAG metrics (BL-05, issue #105).**
+  `scripts/evaluate/evaluate_rag.py` reads the Golden Set from
+  `data/golden_set_v1.jsonl`, loads retrieval settings from
+  `configs/embedding_config.yaml`, computes Hit Rate@5 and MRR, and writes
+  `outputs/eval_report_v1.json`. The runner supports `--config` and emits a
+  clear error when the configured Chroma directory is missing. Metric formulas
+  are documented in `docs/standards/evaluation-metrics.md`.
+- **MINOR: clickable citation links with page anchors (BL-09.1, issue #104).**
+  `configs/ui_config.yaml` задаёт `citations.base_url` и `source_dir`,
+  `src/ui/app.py` строит Markdown-ссылки вида
+  `http://localhost:8000/docs/file.pdf#page=N`, а
+  `src/api/static_serve.py` добавляет безопасный FastAPI endpoint
+  `GET /docs/{filename}` с валидацией basename/path traversal и
+  `application/pdf`. ADR — [`docs/ADR/006-citation-links.md`](docs/ADR/006-citation-links.md);
+  тесты — `tests/test_citation_links.py`, `tests/test_static_serve.py`.
+- **MINOR: metadata inheritance & coverage improvement (BL-02 hardening, issue #109).**
+  `knowledge_base/indexing/build_index.py` добавляет per-document
+  `SectionPropagationState`: чанки без локального заголовка наследуют
+  ближайший `section_title` / `section_number`, получают audit-флаг
+  `section_inherited`, а после длинного разрыва по страницам контекст
+  сбрасывается для защиты от ghost inheritance. До первого заголовка
+  используется fallback по имени документа (`section_fallback=source_filename`),
+  чтобы UI-цитаты имели человекочитаемую подпись.
+- **BL-15 (issue #107):** контекстно-зависимый экспорт из KB UI:
+  `src/utils/export.py` генерирует `.xlsx` и `.md` в памяти через
+  `io.BytesIO`, `configs/export_config.yaml` задаёт строгий allow-list
+  Excel-колонок (`requirement_id`, `requirement_text`, `classification`,
+  `reasoning`, `citations`), а `src/ui/app.py` показывает кнопки
+  «📥 Скачать отчет (.xlsx)» для режима «Анализ ТЗ» и
+  «📥 Сохранить диалог (.md)» для режима «Консультация». Экспорт применяет
+  `mask_text()` ко всем строковым значениям и не включает служебные поля
+  вроде `raw` / `provider`. ADR — [`docs/ADR/008-data-export.md`](docs/ADR/008-data-export.md);
+  тесты — `tests/test_context_export.py`.
+- `docs/standards/llm-behavior.md` v1.0 — стандарт параметров декодирования LLM (BL-22, issue #101): канонический блок `decoding:` (`temperature: 0.1`, `top_p: 0.9`, `seed: 42`, `max_tokens: 1024`), таблица рекомендуемых значений по провайдерам/режимам (DeepSeek, GigaChat, OpenRouter, Ollama), допустимый коридор изменений в Пилоте, обязательное аудит-логирование `decoding_lock applied`. Зарегистрирован в `docs/standards/README.md`.
+- **Prompt Library `prompts/` + `src/llm/prompt_loader.py` (BL-08, issue #94).**
+  Все системные и few-shot-промпты вынесены из `src/llm/client.py` и
+  `src/ui/app.py` в версионируемые файлы по конвенции
+  `<name>_v<MAJOR>.<MINOR>.<ext>`: `prompts/system_classifier_v1.0.md`,
+  `prompts/system_rag_v1.0.md`, `prompts/few_shot_examples_v1.0.json`.
+  Loader (`load_prompt`, `load_few_shot_examples`,
+  `load_prompt_from_path`) вычисляет SHA-256 содержимого и пишет
+  `INFO`-запись в JSON-лог с `prompt_name`, `prompt_version`,
+  `prompt_sha256`, `run_id` — audit-трасса BL-23. `LLMClient`
+  использует `load_prompt_from_path` через существующий
+  `DEFAULT_PROMPT_PATH`, публичные сигнатуры не меняются; `src/ui/app.py`
+  загружает `system_rag_v1.0.md` через `@st.cache_resource`. Архитектура
+  и DoD — [`docs/ADR/004-prompt-management.md`](docs/ADR/004-prompt-management.md);
+  изменения промптов — `prompts/prompt_changelog.md`; 16 unit-кейсов в
+  `tests/test_prompt_loader.py`.
+- **BL-07 (issue #93):** два режима работы KB-тестового UI (`src/ui/app.py`) — **«📊 Анализ ТЗ»** (полностью stateless, токен-cost совпадает с pre-BL-07 baseline) и **«💬 Консультация по документации»** (stateful чат, история ≤ `ui.max_history_messages` сообщений, по умолчанию 6). Переключатель режимов в `st.sidebar.radio`, кнопка «🧹 Очистить историю», автоматический сброс истории при смене режима (`_ensure_mode_state`), инлайн истории в `<history>`-блок промпта без изменения сигнатуры `LLMClient.generate_rag_response()`, JSON-лог `ui_prompt_built mode=… history_messages=… approx_tokens=…` на каждый вызов. Конфиг — `configs/llm_config.yaml` (`ui.max_history_messages`). ADR — [`docs/ADR/004-ui-operation-modes.md`](docs/ADR/004-ui-operation-modes.md); обновлён `docs/CONCEPT.md` §6.2 (компонент UI) и §6.8 (режимы работы UI). Регресс-тесты — `tests/test_ui_modes.py`.
+- `src/rag/chunker.py::split_sections` и флаг `section_aware_chunking` в `configs/embedding_config.yaml` — section-aware splitter режет текст по заголовкам (Markdown `#`, нумерованные разделы `\d+(\.\d+)+`, локализованные `Раздел N` / `Section N`, CAPS-блоки PDF) до применения token-окна; заголовок остаётся в первом чанке секции (BL-06, issue #92).
+- `tests/test_chunker.py` — unit-тесты L1-контракта: дефолты 512/64, guardrails 384–768, корректность section-aware разбиения и пропагация флагов из конфига (BL-06, issue #92).
+- `src/rag/retriever.py` — `HybridChromaRetriever.search()` теперь пишет INFO-лог `bm25_hits=… dense_hits=… fused=… rrf_k=60 top_k=…` на каждый запрос. Лог подтверждает, что в production-пути UI отрабатывает именно фьюжн BM25 + Dense + RRF, а не только векторный поиск (BL-01 DoD, issue #91).
+- `tests/test_hybrid_chroma_retriever.py::test_hybrid_chroma_search_logs_fusion_breakdown` — регресс-тест, проверяющий формат строки фьюжн-лога (issue #91).
+- `src/ui/app.py` — Streamlit UI для ручного тестирования RAG-пайплайна по базе знаний: поле запроса, кнопка «Search KB», вывод ответа LLM в Markdown, секция «Source Chunks» с именем файла, обрезанным текстом и similarity-скором; сайдбар с тоглом Debug Mode и выбором провайдера (DeepSeek / GigaChat). ChromaDB читается из `knowledge_base/vector_store/` (коллекция `clarify_engine_kb`), эмбеддер `BAAI/bge-m3`, конфиг провайдеров — `configs/llm_config.yaml`, секреты — `.env`. Запуск: `streamlit run src/ui/app.py` (issue #70).
+- `python-dotenv` в `requirements.txt` — необходим UI для чтения `.env`.
+- `.env.example` — шаблон переменных окружения с плейсхолдерами `DEEPSEEK_API_KEY`, `GIGACHAT_API_KEY` и флагами `USE_TEST_DATA_MODE`, `STRICT_EMBEDDER` (issue #59; `YANDEXGPT_API_KEY` исключён в issue #64).
+- `scripts/evaluate/evaluate_quality.py` — CLI для замера качества классификации (Macro-F1 и per-class P/R/F1) против `test_data/gold_standard.json`, поддерживает Excel и JSON-предсказания, JSON-логирование и опциональный детальный отчёт (issue #47, NFR-01).
+- `tests/test_quality.py` — smoke-тесты метрик, парсеров входных файлов и CLI evaluate_quality.
+- `docs/audit/2026-05-12_repository-consistency_audit_v1.md` — аудит согласованности репозитория, полноты документации и тестируемости требований (issue #21).
+- `docs/analysis/2026-05-15_analysis_repo-state-and-mvp-recommendations_v1.md` — анализ состояния репозитория, оценка готовности MVP, профиль нагрузки и рекомендации по доработке кода, архитектуры и документации (issue #35).
+- `src/rag/chunker.py` — токенайзер-чанкер на основе `BAAI/bge-m3`, параметры 200–300 токенов с overlap 50 (issue #45 MUST 2).
+- `scripts/evaluate/evaluate_quality.py` — расчёт точности/полноты/F1 по `[Статус]` против `test_data/gold_standard.json` (issue #45 SHOULD 1).
+- `scripts/evaluate/benchmark_pipeline.py` — бенчмарк пропускной способности пайплайна на N синтетических требований в режимах `stub` / `production` (issue #45 SHOULD 1).
+- `CONTRIBUTING.md` — Definition of Done, матрица команд, правила ветвления (issue #45 MAY 1).
+- `SECURITY.md` — политика обработки утечек, SLA, контакты Product Owner (issue #45 MAY 1).
+- `tests/test_excel_exporter.py`, `tests/test_app_retry.py`, `tests/test_evaluate_quality.py` — регресс-тесты на FR-06 (4-колоночный экспорт), retry-by-RunID и контракт F1-оценщика.
 - **BL-01** (#91): Hybrid retrieval (BM25 + `BAAI/bge-m3` dense) с RRF-фьюзией (`k=60`) и INFO-логированием `bm25_hits`, `dense_hits`, `fused`, `rrf_k`, `top_k`.
 - **BL-02** (#109): Metadata inheritance (Section Propagation) для чанков базы знаний: наследование `section_title` / `section_number`, audit-флаг `section_inherited`, fallback по имени документа и улучшение coverage.
 - **BL-04** (#91): Strict embedder config и централизованное логирование параметров retrieval-пути.

@@ -55,6 +55,9 @@ REQUIRED_METADATA_KEYS: Tuple[str, ...] = (
     "section_number",
     "product",
     "section_inherited",
+    "parent_id",
+    "section_id",
+    "parent_text",
 )
 
 COVERAGE_METADATA_KEYS: Tuple[str, ...] = (
@@ -438,6 +441,7 @@ def build_chunk_metadata(
         number, title = extract_section(text)
         section = _SectionResolution(number=number, title=title)
     product = infer_product(source, product_map=product_map)
+    parent_id = _build_parent_id(source, section.number, section.title)
     return {
         "source": source,
         "chunk_idx": int(chunk_idx),
@@ -447,7 +451,18 @@ def build_chunk_metadata(
         "product": product,
         "section_inherited": section.inherited,
         "section_fallback": section.fallback,
+        "parent_id": parent_id,
+        "section_id": parent_id,
+        "parent_text": "",
     }
+
+
+def _build_parent_id(source: str, section_number: str, section_title: str) -> str:
+    number = re.sub(r"\s+", " ", section_number or "").strip()
+    title = re.sub(r"\s+", " ", section_title or "").strip()
+    if number or title:
+        return f"{source}::{number}::{title}"
+    return f"{source}::document"
 
 
 # --------------------------------------------------------------- registry --
@@ -619,6 +634,19 @@ def main() -> int:
         if chunk_counter == 0:
             update_registry(path.name, status="Skipped", sha256=sha256_hash(path))
             continue
+
+        doc_parent_texts: Dict[str, str] = {}
+        doc_meta_start = len(metadatas) - chunk_counter
+        for idx in range(doc_meta_start, len(metadatas)):
+            parent_id = str(metadatas[idx].get("parent_id") or "")
+            if not parent_id:
+                continue
+            doc_parent_texts[parent_id] = (
+                f"{doc_parent_texts.get(parent_id, '')}\n\n{docs[idx]}".strip()
+            )
+        for idx in range(doc_meta_start, len(metadatas)):
+            parent_id = str(metadatas[idx].get("parent_id") or "")
+            metadatas[idx]["parent_text"] = doc_parent_texts.get(parent_id, docs[idx])
 
         logger.info("→ %d chunks (pages=%d)", chunk_counter, len(pages))
         logger.info(

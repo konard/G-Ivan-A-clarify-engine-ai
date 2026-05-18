@@ -37,6 +37,7 @@ _WORD_RE = re.compile(r"\w+", flags=re.UNICODE)
 DEFAULT_EMBEDDING_CONFIG_PATH = "configs/embedding_config.yaml"
 DEFAULT_TOP_K = 3
 DEFAULT_RRF_K = 60
+DEFAULT_PARENT_CONTEXT_MAX_CHARS = 6000
 
 # Fallback used when ``vector_store.persist_directory`` is missing or unreadable
 # in ``configs/embedding_config.yaml``. The indexer
@@ -370,6 +371,11 @@ class HybridRetriever:
         embedder: Optional[Callable[[str], Sequence[float]]] = None,
     ) -> None:
         self.config = config or {}
+        self.use_parent_context = bool(self.config.get("use_parent_context", False))
+        self.parent_context_max_chars = int(
+            self.config.get("parent_context_max_chars", DEFAULT_PARENT_CONTEXT_MAX_CHARS)
+            or DEFAULT_PARENT_CONTEXT_MAX_CHARS
+        )
         # Strict embedder mode (issue #45): when no embedder is injected by the
         # caller we *must* load the configured sentence-transformers model.
         # Failure to load raises ``RuntimeError`` — silently falling back to a
@@ -439,6 +445,7 @@ class HybridRetriever:
         query: str,
         top_k: Optional[int] = None,
         rrf_k: Optional[int] = None,
+        use_parent_context: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
         """Run hybrid search.
 
@@ -469,12 +476,20 @@ class HybridRetriever:
         bm25_results = self._ranked_results(bm25_scores)
         dense_results = self._ranked_results(dense_scores)
 
-        return reciprocal_rank_fusion(
+        fused = reciprocal_rank_fusion(
             bm25_results=bm25_results,
             dense_results=dense_results,
             k=effective_rrf_k,
             top_k=effective_top_k,
         )
+        parent_context_enabled = (
+            bool(use_parent_context)
+            if use_parent_context is not None
+            else self.use_parent_context
+        )
+        if parent_context_enabled:
+            return expand_parent_context(fused, max_chars=self.parent_context_max_chars)
+        return fused
 
     def _ranked_results(self, scores: Sequence[float]) -> List[Dict[str, Any]]:
         """Order documents by raw score (desc) and emit chunk dicts."""
@@ -509,6 +524,73 @@ def build_retriever(
     if documents:
         retriever.add_documents(documents)
     return retriever
+
+
+def _parent_id(metadata: Mapping[str, Any], source: str) -> str:
+    explicit = metadata.get("parent_id") or metadata.get("section_id")
+    if explicit:
+        return str(explicit)
+    section_number = str(metadata.get("section_number") or "").strip()
+    section_title = str(metadata.get("section_title") or "").strip()
+    if section_number or section_title:
+        return f"{source}::{section_number}::{section_title}"
+    return f"{source}::document"
+
+
+def _bounded_text(text: str, max_chars: int) -> str:
+    if max_chars <= 0 or len(text) <= max_chars:
+        return text
+    return text[:max_chars].rstrip()
+
+
+def expand_parent_context(
+    chunks: Sequence[Mapping[str, Any]],
+    *,
+    max_chars: int = DEFAULT_PARENT_CONTEXT_MAX_CHARS,
+) -> List[Dict[str, Any]]:
+    """Collapse child chunk hits into parent section contexts.
+
+    Child hits keep the original ranking signal, while returned ``text`` uses
+    ``metadata.parent_text`` when available. The result count may shrink because
+    multiple child chunks from one section map to a single parent.
+    """
+    grouped: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
+    for chunk in chunks:
+        meta = dict(chunk.get("metadata") or {})
+        source = str(chunk.get("source") or meta.get("source") or "unknown")
+        parent_id = _parent_id(meta, source)
+        parent_text = str(meta.get("parent_text") or chunk.get("text") or "")
+        parent_text = _bounded_text(parent_text.strip(), max_chars)
+        existing = grouped.get(parent_id)
+        child_ref = {
+            "source": source,
+            "chunk_idx": chunk.get("chunk_idx", meta.get("chunk_idx")),
+            "score": chunk.get("score"),
+        }
+        if existing is None:
+            parent_meta = dict(meta)
+            parent_meta["parent_id"] = parent_id
+            parent_meta["parent_context"] = True
+            grouped[parent_id] = {
+                "text": parent_text,
+                "source": source,
+                "chunk_idx": chunk.get("chunk_idx", meta.get("chunk_idx")),
+                "distance": chunk.get("distance"),
+                "similarity": chunk.get("similarity"),
+                "score": float(chunk.get("score") or 0.0),
+                "metadata": parent_meta,
+                "page": chunk.get("page") or _page_from_metadata(meta),
+                "child_chunks": [child_ref],
+            }
+            order.append(parent_id)
+        else:
+            existing["score"] = max(
+                float(existing.get("score") or 0.0),
+                float(chunk.get("score") or 0.0),
+            )
+            existing.setdefault("child_chunks", []).append(child_ref)
+    return [grouped[parent_id] for parent_id in order]
 
 
 # ---------------------------------------------------------- ChromaDB retriever --
@@ -675,6 +757,11 @@ class HybridChromaRetriever:
         client_factory: Optional[Callable[[str], Any]] = None,
     ) -> None:
         self.config = config or {}
+        self.use_parent_context = bool(self.config.get("use_parent_context", False))
+        self.parent_context_max_chars = int(
+            self.config.get("parent_context_max_chars", DEFAULT_PARENT_CONTEXT_MAX_CHARS)
+            or DEFAULT_PARENT_CONTEXT_MAX_CHARS
+        )
         self._dense = ChromaRetriever(
             config=self.config,
             project_root=project_root,
@@ -786,7 +873,12 @@ class HybridChromaRetriever:
         return ranked
 
     # -------------------------------------------------------------- search --
-    def search(self, query: str, top_k: Optional[int] = None) -> List[Dict[str, Any]]:
+    def search(
+        self,
+        query: str,
+        top_k: Optional[int] = None,
+        use_parent_context: Optional[bool] = None,
+    ) -> List[Dict[str, Any]]:
         """Run hybrid BM25 + dense retrieval with RRF fusion.
 
         ``top_k`` controls the number of fused results. Each branch is sampled
@@ -849,6 +941,13 @@ class HybridChromaRetriever:
                     "page": item.get("page", ""),
                 }
             )
+        parent_context_enabled = (
+            bool(use_parent_context)
+            if use_parent_context is not None
+            else self.use_parent_context
+        )
+        if parent_context_enabled:
+            return expand_parent_context(results, max_chars=self.parent_context_max_chars)
         return results
 
     def embed_query(self, query: str) -> List[float]:

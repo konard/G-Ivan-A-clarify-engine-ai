@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.rag.retriever import (  # noqa: E402
     HybridRetriever,
     _hash_embedding,
+    expand_parent_context,
     build_retriever,
 )
 
@@ -61,6 +62,29 @@ def test_build_retriever_factory() -> None:
     results = retriever.search("протоколы интеграции SOAP")
     assert results
     assert results[0]["source"] == "integration.md"
+
+
+def test_parent_context_is_opt_in_and_bounded() -> None:
+    parent_text = "A" * 20
+    chunks = [
+        {
+            "text": "child one",
+            "source": "doc.md",
+            "score": 0.2,
+            "metadata": {"parent_id": "doc.md::p1", "parent_text": parent_text},
+        },
+        {
+            "text": "child two",
+            "source": "doc.md",
+            "score": 0.1,
+            "metadata": {"parent_id": "doc.md::p1", "parent_text": parent_text},
+        },
+    ]
+    results = expand_parent_context(chunks, max_chars=8)
+    assert len(results) == 1
+    assert results[0]["text"] == "A" * 8
+    assert results[0]["score"] == 0.2
+    assert results[0]["metadata"]["parent_context"] is True
 
 
 def test_strict_embedder_mode_raises_without_dependencies(monkeypatch) -> None:

@@ -122,3 +122,15 @@ def test_load_config_returns_embedding_config_keys() -> None:
         assert "chunk_overlap" in config
     finally:
         sys.modules.pop(spec.name, None)
+
+
+def test_build_chunk_metadata_adds_parent_fields(build_index_module) -> None:
+    meta = build_index_module.build_chunk_metadata(
+        source="doc.md",
+        chunk_idx=0,
+        page_number=1,
+        text="1.2 Интеграции\nREST API",
+    )
+    assert meta["parent_id"] == "doc.md::1.2::Интеграции"
+    assert meta["section_id"] == meta["parent_id"]
+    assert "parent_text" in meta
