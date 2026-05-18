@@ -7,10 +7,22 @@
 ## [Unreleased]
 
 ### Fixed
+- **PATCH: configurable LLM provider HTTP timeouts (issue #139).**
+  `LLMClient` resolves per-provider `timeout` / `timeout_seconds` values before
+  falling back to `OLLAMA_TIMEOUT`, `PROVIDER_TIMEOUT`,
+  `LLM_PROVIDER_TIMEOUT`, then 30 seconds. DeepSeek, GigaChat, OpenRouter, and
+  Ollama HTTP calls now use the resolved timeout; regression tests cover
+  config/env/default precedence.
 - **PATCH: Windows UTF-8 config compatibility (BL-26, issue #125).**
   YAML/Markdown/Python text attributes are pinned to UTF-8/LF and regression
   tests verify config loaders read YAML with explicit `encoding="utf-8"` so
   Russian Windows `cp1251` locales do not trigger `UnicodeDecodeError`.
+- **PATCH: Parent-aware retrieval wiring (BL-10, issue #137).**
+  KB UI again exposes the `search_kb` retrieval path, composes multi-hop and
+  query expansion with `ParentAwareRetriever`, enables parent context only for
+  «Консультация», and aligns `configs/embedding_config.yaml.required_metadata`
+  with `parent_id` / `section_id` / `parent_text`.
+
 ### Added
 - **BL-18 (issue #132):** `.docx` ingest is routed through
   `load_requirements_by_extension()` alongside `.xlsx`; `DocxParser` now emits

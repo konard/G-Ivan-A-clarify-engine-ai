@@ -274,7 +274,13 @@ def search_vector_store(
     enable_query_expansion: bool = False,
     use_parent_context: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Run a vector search and return chunk dicts ordered by similarity."""
+    """Run retrieval wrappers and return ranked KB context chunks.
+
+    Consultation mode can enable optional wrappers, but the final caller-facing
+    contract stays stable: search child chunks first, then expand to parent
+    sections only when explicitly requested.
+    """
+    from src.rag.retriever import ParentAwareRetriever
 
     # --- Imports ---
     from src.rag.retriever import build_retriever
@@ -322,11 +328,20 @@ def search_vector_store(
 
     # --- Execution ---
     # Active retriever is now either Base, Iterative, or QueryExpansion(Iterative(Base))
+    if use_parent_context:
+        active_retriever = ParentAwareRetriever(
+            active_retriever,
+            max_chars=getattr(
+                base_retriever,
+                "parent_context_max_chars",
+                6000,
+            ),
+        )
+
     try:
         chunks = active_retriever.search(
             query,
             top_k=top_k,
-            use_parent_context=use_parent_context,
         )
     except Exception as exc:  # noqa: BLE001
         raise KBError(f"ChromaDB query failed: {exc}") from exc
@@ -340,9 +355,8 @@ def search_vector_store(
         )
     return chunks
 
-
+# Backward-compatible alias for older UI/tests.
 search_kb = search_vector_store
-
 
 # ------------------------------------------------------------- BL-09 citations --
 def build_citation_link(
