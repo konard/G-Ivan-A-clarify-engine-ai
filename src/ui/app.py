@@ -305,13 +305,16 @@ def search_kb(
         )
 
     if enable_query_expansion:
-        from src.rag.query_expansion import QueryExpansionRetriever, QueryExpansionConfig
+        from src.rag.query_expansion import (
+            QueryExpansionConfig,
+            QueryExpansionRetriever,
+        )
         from src.rag.retriever import load_embedding_config
 
         expansion_config = getattr(base_retriever, "config", None)
         if not isinstance(expansion_config, dict):
             expansion_config = load_embedding_config(str(EMBEDDING_CONFIG_PATH))
-        
+
         if QueryExpansionConfig.from_mapping(expansion_config).enabled:
             active_retriever = QueryExpansionRetriever(
                 active_retriever,
@@ -338,9 +341,11 @@ def search_kb(
     except Exception as exc:  # noqa: BLE001
         raise KBError(f"ChromaDB query failed: {exc}") from exc
     if not chunks:
+        collection_name = getattr(base_retriever, "collection_name", "unknown")
+        persist_directory = getattr(base_retriever, "persist_directory", "unknown")
         raise KBError(
-            f"Collection '{base_retriever.collection_name}' at "
-            f"'{base_retriever.persist_directory}' returned no results. Make sure "
+            f"Collection '{collection_name}' at "
+            f"'{persist_directory}' returned no results. Make sure "
             "the index is built: `python knowledge_base/indexing/build_index.py`."
         )
     return chunks
