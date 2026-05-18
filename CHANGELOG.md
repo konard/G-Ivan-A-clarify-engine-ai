@@ -6,7 +6,16 @@
 
 ## [Unreleased]
 
-(сюда будут идти следующие изменения)
+### Added
+- **BL-25 (issue #122):** конфигурируемый блок `providers.ollama` в
+  `configs/llm_config.yaml` с `${OLLAMA_*:default}` placeholders для
+  `model`, `base_url`, `timeout_seconds` и локальными `options`
+  (`num_ctx`, `num_thread`, `keep_alive`, `temperature`). `LLMClient`
+  применяет YAML/env значения и централизованный `decoding:` к Ollama
+  RAG-вызовам; дефолтный timeout повышен до 180 секунд для CPU-only АРМ.
+  Документация обновлена в `README.md`, `.env.example` и
+  `docs/standards/llm-behavior.md`; регресс-тест —
+  `tests/test_llm_client.py::test_ollama_config_loading`.
 
 ## [0.2.0] - 2026-05-18
 
