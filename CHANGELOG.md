@@ -12,6 +12,10 @@
   tests verify config loaders read YAML with explicit `encoding="utf-8"` so
   Russian Windows `cp1251` locales do not trigger `UnicodeDecodeError`.
 ### Added
+- **BL-18 (issue #132):** `.docx` ingest is routed through
+  `load_requirements_by_extension()` alongside `.xlsx`; `DocxParser` now emits
+  non-empty `locator` metadata for paragraphs and table cells, and Excel ingest
+  supports multi-sheet workbooks with `sheet_name` in each locator.
 - **BL-12 (issue #124):** Query Expansion для режима «Консультация»:
   `QueryExpansionRetriever` генерирует 3–4 семантические переформулировки
   через `prompts/system_rag_query_expansion_v1.md`, выполняет retrieval по
