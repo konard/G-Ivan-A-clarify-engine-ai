@@ -23,8 +23,8 @@ REPORT_TABLE_COLUMNS: List[str] = [
 STATUS_VALUES = {"Да", "Нет", "Частично", "НД", "Ошибка"}
 
 
-class ExportRow(BaseModel):
-    """Format-invariant MVP export row.
+class NormalizedExportRow(BaseModel):
+    """Internal MVP export row used by concrete writer adapters.
 
     The public aliases intentionally match the MVP export markup columns.
     ``locator`` remains structured so adapters can use it for routing, while
@@ -75,14 +75,14 @@ class ExportRow(BaseModel):
 
 
 def rows_from_results(
-    results: Iterable[Mapping[str, Any] | ExportRow],
+    results: Iterable[Mapping[str, Any] | NormalizedExportRow],
     *,
     run_id: str = "",
-) -> List[ExportRow]:
+) -> List[NormalizedExportRow]:
     """Convert pipeline result dictionaries into validated export rows."""
-    rows: List[ExportRow] = []
+    rows: List[NormalizedExportRow] = []
     for index, item in enumerate(results, start=1):
-        if isinstance(item, ExportRow):
+        if isinstance(item, NormalizedExportRow):
             row = item if item.run_id or not run_id else item.model_copy(
                 update={"run_id": run_id}
             )
@@ -96,7 +96,7 @@ def rows_from_results(
             if run_id and not payload.get("[RunID]") and not payload.get("run_id"):
                 payload["[RunID]"] = run_id
             payload.setdefault("ref", format_locator(payload.get("locator") or {}))
-            rows.append(ExportRow.model_validate(payload))
+            rows.append(NormalizedExportRow.model_validate(payload))
             continue
 
         classification = item.get("classification") or {}
@@ -108,7 +108,7 @@ def rows_from_results(
             comment = f"Ошибка обработки: {error}"
 
         locator = dict(item.get("locator") or {})
-        row = ExportRow(
+        row = NormalizedExportRow(
             id=int(item.get("id") or index),
             ref=format_locator(locator),
             source_text=str(item.get("text") or item.get("Требование") or ""),
@@ -123,10 +123,10 @@ def rows_from_results(
 
 
 def ensure_export_rows(
-    rows: Sequence[Mapping[str, Any] | ExportRow],
+    rows: Sequence[Mapping[str, Any] | NormalizedExportRow],
     *,
     run_id: str = "",
-) -> List[ExportRow]:
+) -> List[NormalizedExportRow]:
     return rows_from_results(rows, run_id=run_id)
 
 

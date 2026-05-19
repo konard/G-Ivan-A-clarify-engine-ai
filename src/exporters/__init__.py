@@ -1,4 +1,4 @@
-"""Result export router and adapter registry."""
+"""Result export router and public export contract."""
 
 from __future__ import annotations
 
@@ -7,10 +7,11 @@ from typing import Any, Dict, Iterable, Mapping, Protocol, Sequence
 
 import yaml
 
+from src.exporters.contract import ExportDocument, ExportMetadata, ExportRow
 from src.exporters.docx_exporter import DocxExporter
 from src.exporters.md_exporter import MarkdownExporter
 from src.exporters.schema import (
-    ExportRow,
+    NormalizedExportRow,
     RESULT_COLUMNS,
     ensure_export_rows,
     format_locator,
@@ -20,12 +21,14 @@ from src.exporters.schema import (
 DEFAULT_EXPORT_CONFIG_PATH = (
     Path(__file__).resolve().parents[2] / "configs" / "export_config.yaml"
 )
+
+
 class IExporter(Protocol):
     output_format: str
 
     def export(
         self,
-        rows: Sequence[ExportRow],
+        rows: Sequence[NormalizedExportRow],
         output_file: str | Path,
         *,
         source_file: str | Path | None = None,
@@ -41,7 +44,7 @@ class ExcelExporter:
 
     def export(
         self,
-        rows: Sequence[ExportRow],
+        rows: Sequence[NormalizedExportRow],
         output_file: str | Path,
         *,
         source_file: str | Path | None = None,
@@ -99,7 +102,7 @@ class ExportRouter:
 
     def export(
         self,
-        results: Iterable[Mapping[str, Any] | ExportRow],
+        results: Iterable[Mapping[str, Any] | NormalizedExportRow],
         output_file: str | Path | None = None,
         *,
         output_format: str | None = None,
@@ -202,7 +205,7 @@ def _normalize_format(output_format: str | Path) -> str:
     return normalized
 
 
-def _run_id_from_rows(rows: Sequence[ExportRow]) -> str:
+def _run_id_from_rows(rows: Sequence[NormalizedExportRow]) -> str:
     for row in rows:
         if row.run_id:
             return row.run_id
@@ -212,8 +215,10 @@ def _run_id_from_rows(rows: Sequence[ExportRow]) -> str:
 from src.exporters.excel_exporter import save_results  # noqa: E402
 
 __all__ = [
-    "ExportRouter",
+    "ExportDocument",
+    "ExportMetadata",
     "ExportRow",
+    "ExportRouter",
     "ExcelExporter",
     "DocxExporter",
     "MarkdownExporter",

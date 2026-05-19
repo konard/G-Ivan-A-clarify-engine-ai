@@ -21,7 +21,11 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Union
 
-from src.exporters.schema import ExportRow, RESULT_COLUMNS, rows_from_results
+from src.exporters.schema import (
+    NormalizedExportRow,
+    RESULT_COLUMNS,
+    rows_from_results,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +74,7 @@ def save_results(
 
 
 def save_export_rows(
-    rows: Sequence[ExportRow],
+    rows: Sequence[NormalizedExportRow],
     output_file: Union[str, Path],
     sheet_name: str = "Results",
     source_file: Optional[Union[str, Path]] = None,
@@ -155,7 +159,7 @@ def _merge_source_sheet(
     source_df: Any,
     *,
     current_sheet_name: str,
-    rows: Sequence[ExportRow],
+    rows: Sequence[NormalizedExportRow],
     run_id: str,
     single_sheet: bool,
 ):
@@ -178,7 +182,7 @@ def _merge_source_sheet(
 
 
 def _source_row_index_for_sheet(
-    row: ExportRow,
+    row: NormalizedExportRow,
     *,
     current_sheet_name: str,
     single_sheet: bool,
@@ -197,7 +201,7 @@ def _source_row_index_for_sheet(
     return None
 
 
-def _run_id_from_rows(rows: Sequence[ExportRow]) -> str:
+def _run_id_from_rows(rows: Sequence[NormalizedExportRow]) -> str:
     for row in rows:
         if row.run_id:
             return row.run_id

@@ -8,7 +8,7 @@ from typing import Sequence
 
 import yaml
 
-from src.exporters.schema import ExportRow, REPORT_TABLE_COLUMNS
+from src.exporters.schema import NormalizedExportRow, REPORT_TABLE_COLUMNS
 
 
 class MarkdownExporter:
@@ -18,7 +18,7 @@ class MarkdownExporter:
 
     def export(
         self,
-        rows: Sequence[ExportRow],
+        rows: Sequence[NormalizedExportRow],
         output_file: str | Path,
         *,
         source_file: str | Path | None = None,
@@ -71,7 +71,7 @@ def _table_separator() -> str:
     return "|---:|---|---|---|---|---:|---|"
 
 
-def _table_row(row: ExportRow) -> str:
+def _table_row(row: NormalizedExportRow) -> str:
     values = [
         row.id,
         row.ref,
