@@ -31,6 +31,10 @@
   with `parent_id` / `section_id` / `parent_text`.
 
 ### Added
+- **BL-27 (issue #146):** Accepted export-markup v1.0 as the shared
+  `.xlsx` / `.docx` / `.md` result contract, added Pydantic `ExportRow`
+  validation for the 7 required fields plus `Ref` / schema metadata, and
+  documented ADR-002 extension rules for `schema_version: "1.1"+`.
 - **BL-14 (issue #136):** Offline Dependency Extraction for KB chunks.
   `scripts/tools/extract_dependencies.py` enriches ChromaDB metadata with
   `related_sections`, `prerequisites`, `see_also`, and
