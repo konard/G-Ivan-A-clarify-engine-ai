@@ -31,6 +31,11 @@
   with `parent_id` / `section_id` / `parent_text`.
 
 ### Added
+- **BL-28 (issue #148):** Multi-format export through `ExportRouter`.
+  Added a shared `ExportRow` MVP schema, `.docx` and `.md` report adapters,
+  report filename templating via `configs/export_config.yaml`, pipeline routing
+  by output suffix, and multi-sheet `.xlsx` export that maps results by parser
+  locator without modifying the source file.
 - **BL-14 (issue #136):** Offline Dependency Extraction for KB chunks.
   `scripts/tools/extract_dependencies.py` enriches ChromaDB metadata with
   `related_sections`, `prerequisites`, `see_also`, and
