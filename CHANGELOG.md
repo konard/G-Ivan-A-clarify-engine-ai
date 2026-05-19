@@ -72,6 +72,12 @@
   `LABELS` contract and component callables; full suite at 347 tests.
 
 ### Documentation
+- **DOCUMENTATION: BL-46 backlog branch update to v1.4 (issue #178).** Added
+  `docs/backlog/2026-05-17_backlog_rag-optimization_v1.4.md`, archived
+  completed Sprint 3 tasks BL-34..BL-45 with artifact links, updated the active
+  backlog register, and added BL-47 research for ARM installer, cloud TZ
+  access, and documentation update flow.
+
 - **DOCUMENTATION: BL-45 ARM deployment runbook for Windows CMD + CPU Ollama
   (issue #176).** Added `docs/runbooks/arm-deployment-ivan.md` with the
   Ivan Gulienko ARM deployment path: clean Windows CMD install, restart flow,
