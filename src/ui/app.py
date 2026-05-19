@@ -20,13 +20,14 @@ configured embedding model) are used.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import quote
 from typing import Any, Callable, Dict, List, Optional, Sequence
+from urllib.parse import quote
 from uuid import uuid4
 
 import streamlit as st
@@ -194,16 +195,28 @@ def truncate(text: str, limit: int = CHUNK_PREVIEW_CHARS) -> str:
     return text[:limit].rstrip() + "..."
 
 
+def embedding_config_hash(path: Path = EMBEDDING_CONFIG_PATH) -> str:
+    """Return an md5 hash used only as a Streamlit cache invalidation key."""
+    try:
+        config_bytes = path.read_bytes()
+    except OSError:
+        return "missing"
+    return hashlib.md5(config_bytes).hexdigest()
+
+
 # ----------------------------------------------------- cached resource loaders --
 @st.cache_resource(show_spinner="Loading retriever (BM25 + bge-m3 + ChromaDB)…")
-def get_retriever():
+def get_retriever(config_hash: Optional[str] = None):
     """Build and cache the production hybrid retriever (BL-01).
 
     Combines BM25 lexical recall + bge-m3 dense recall with RRF fusion
-    (k=60) over the persistent ChromaDB collection.
+    (k=60) over the persistent ChromaDB collection. ``config_hash`` is not
+    used directly; it participates in Streamlit's cache key so manual edits to
+    ``configs/embedding_config.yaml`` invalidate the cached retriever.
     """
     from src.rag.retriever import HybridChromaRetriever
 
+    _ = config_hash
     try:
         return HybridChromaRetriever.from_config(
             config_path=str(EMBEDDING_CONFIG_PATH),
@@ -282,11 +295,8 @@ def search_vector_store(
     """
     from src.rag.retriever import ParentAwareRetriever
 
-    # --- Imports ---
-    from src.rag.retriever import build_retriever
-    
     # --- Base Retriever ---
-    base_retriever = build_retriever()
+    base_retriever = get_retriever(embedding_config_hash())
     active_retriever = base_retriever
 
     multi_hop = resolve_multi_hop_settings(llm_config, ui_mode)
@@ -349,8 +359,8 @@ def search_vector_store(
         collection_name = getattr(base_retriever, "collection_name", "unknown")
         persist_directory = getattr(base_retriever, "persist_directory", "unknown")
         raise KBError(
-            f"Collection '{base_retriever.collection_name}' at "
-            f"'{base_retriever.persist_directory}' returned no results. Make sure "
+            f"Collection '{collection_name}' at "
+            f"'{persist_directory}' returned no results. Make sure "
             "the index is built: `python knowledge_base/indexing/build_index.py`."
         )
     return chunks
@@ -1055,7 +1065,7 @@ def main() -> None:
 
     retriever_info: Optional[Dict[str, str]] = None
     try:
-        retriever = get_retriever()
+        retriever = get_retriever(embedding_config_hash())
         retriever_info = {
             "persist_directory": str(retriever.persist_directory),
             "collection_name": retriever.collection_name,

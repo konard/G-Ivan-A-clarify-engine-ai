@@ -1,13 +1,16 @@
+import logging
 import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.rag.retriever import (  # noqa: E402
     HybridRetriever,
     ParentAwareRetriever,
+    _load_dense_embedder,
     _hash_embedding,
     expand_parent_context,
     build_retriever,
@@ -161,3 +164,31 @@ def test_strict_embedder_mode_raises_without_dependencies(monkeypatch) -> None:
     monkeypatch.setattr(builtins, "__import__", fake_import)
     with pytest.raises(RuntimeError, match="Embedding model unavailable. Strict mode enabled."):
         HybridRetriever()
+
+
+def test_embedding_config_ships_strict_embedder_enabled() -> None:
+    config = yaml.safe_load(
+        Path("configs/embedding_config.yaml").read_text(encoding="utf-8")
+    )
+
+    assert config["strict_embedder"] is True
+
+
+def test_non_strict_embedder_falls_back_to_hash(monkeypatch, caplog) -> None:
+    """Explicit non-strict mode may degrade to the deterministic hash embedder."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name.startswith("sentence_transformers"):
+            raise ImportError("simulated missing dep")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    caplog.set_level(logging.WARNING, logger="src.rag.retriever")
+
+    embedder = _load_dense_embedder({"strict_embedder": False})
+
+    assert embedder("REST API") == _hash_embedding("REST API")
+    assert "strict_embedder=false" in caplog.text

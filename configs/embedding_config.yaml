@@ -7,6 +7,9 @@
 # collection — operators must rebuild the index after this change ships.
 
 model_name: "BAAI/bge-m3"
+# Production must fail fast when bge-m3 cannot be loaded. Set to false only
+# for local/offline experiments where the deterministic hash fallback is OK.
+strict_embedder: true
 max_length: 512
 normalize_embeddings: true
 

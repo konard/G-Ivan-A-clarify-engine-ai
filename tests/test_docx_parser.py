@@ -48,9 +48,31 @@ def test_docx_parser_sample_file_preserves_table_traceability() -> None:
 
     assert items
     assert all(item.get("locator") for item in items)
+    assert all("page_number" not in item["locator"] for item in items)
     table_items = [item for item in items if item["locator"]["type"] == "table"]
     assert table_items
     assert any("Бесперебойную запись пациентов" in item["text"] for item in table_items)
+
+
+def test_docx_table_list_locator_uses_structural_path_without_page_number(
+    tmp_path: Path,
+) -> None:
+    document = docx.Document()
+    table = document.add_table(rows=1, cols=1)
+    table.cell(0, 0).text = "1. Настроить SLA уведомления"
+    file_path = tmp_path / "list-in-table.docx"
+    document.save(file_path)
+
+    items = DocxParser().load_requirements(file_path)
+
+    assert [item["text"] for item in items] == ["Настроить SLA уведомления"]
+    locator = items[0]["locator"]
+    assert "page_number" not in locator
+    assert locator["type"] == "table"
+    assert locator["table"] == 1
+    assert locator["row"] == 1
+    assert locator["col"] == 1
+    assert locator["list_path"]
 
 
 def test_dispatcher_routes_xlsx_docx_and_rejects_unknown(tmp_path: Path) -> None:

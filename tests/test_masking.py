@@ -54,6 +54,13 @@ class TestEmailMasking:
         assert "[EMAIL]" in result
         assert "dev.team@sub.domain.example.com" not in result
 
+    def test_email_with_plus_tag_and_dash_domain(self):
+        """Common RFC-style mailbox forms must not slip through."""
+        text = "Escalate to support.team+vip@client-service.example.ru"
+        result = mask_text(text)
+        assert "[EMAIL]" in result
+        assert "support.team+vip@client-service.example.ru" not in result
+
 
 class TestPhoneRUMasking:
     """Test Russian phone number masking."""
@@ -82,6 +89,13 @@ class TestPhoneRUMasking:
         text = "Call +7(123)456-78-90"
         result = mask_text(text)
         assert "[PHONE]" in result
+
+    def test_mask_phone_with_eight_prefix(self):
+        """Russian local 8-prefix phone numbers are also sensitive contacts."""
+        text = "Телефон ответственного: 8 (495) 123-45-67"
+        result = mask_text(text)
+        assert "[PHONE]" in result
+        assert "8 (495) 123-45-67" not in result
 
 
 class TestIPMasking:
@@ -139,6 +153,14 @@ class TestInternalDomainMasking:
         assert "[DOMAIN]" in result
         assert "portal.corp.local" not in result
         assert "api.internal.example" not in result
+
+    def test_mask_multilevel_internal_domain(self):
+        """The whole internal hostname must be masked, not only its suffix."""
+        text = "Endpoint: deep.api.corp.local"
+        result = mask_text(text)
+        assert "[DOMAIN]" in result
+        assert "deep.api.corp.local" not in result
+        assert "deep.api." not in result
 
 
 class TestContextChunksMasking:
