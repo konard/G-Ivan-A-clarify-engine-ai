@@ -20,6 +20,7 @@ install.
 
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -123,6 +124,20 @@ def test_get_max_history_messages_reads_default_from_llm_config() -> None:
     assert app.get_max_history_messages(config) == 6
 
 
+def test_embedding_config_hash_tracks_file_bytes(tmp_path: Path) -> None:
+    config_path = tmp_path / "embedding_config.yaml"
+    config_path.write_bytes(b"model_name: test-model\n")
+
+    first_hash = app.embedding_config_hash(config_path)
+    assert first_hash == hashlib.md5(b"model_name: test-model\n").hexdigest()
+
+    config_path.write_bytes(b"model_name: changed-model\n")
+    second_hash = app.embedding_config_hash(config_path)
+
+    assert second_hash == hashlib.md5(b"model_name: changed-model\n").hexdigest()
+    assert second_hash != first_hash
+
+
 # ------------------------------------------------------------- multi-hop cfg --
 def test_resolve_multi_hop_settings_defaults_to_disabled() -> None:
     settings = app.resolve_multi_hop_settings({}, app.MODE_CONSULTATION)
@@ -182,17 +197,17 @@ def test_search_vector_store_passes_query_arguments(monkeypatch) -> None:
             captured["use_parent_context"] = use_parent_context
             return chunks
 
-    monkeypatch.setattr("src.rag.retriever.build_retriever", lambda: _Retriever())
+    monkeypatch.setattr(app, "get_retriever", lambda *_args, **_kwargs: _Retriever())
 
     assert app.search_vector_store(
         "Как настроить SIP?",
         top_k=3,
-        use_parent_context=True,
+        use_parent_context=False,
     ) == chunks
     assert captured == {
         "query": "Как настроить SIP?",
         "top_k": 3,
-        "use_parent_context": True,
+        "use_parent_context": False,
     }
 
 
@@ -418,7 +433,7 @@ def test_search_kb_wraps_parent_context_after_child_retrieval(monkeypatch) -> No
             ]
 
     retriever = _Retriever()
-    monkeypatch.setattr(app, "get_retriever", lambda: retriever)
+    monkeypatch.setattr(app, "get_retriever", lambda *_args, **_kwargs: retriever)
 
     chunks = app.search_kb(
         "Q",

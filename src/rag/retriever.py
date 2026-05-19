@@ -2,11 +2,12 @@
 
 Ranking is fused with Reciprocal Rank Fusion (RRF). The default embedder is a
 real ``sentence-transformers`` ``BAAI/bge-m3`` model — there is **no** silent
-fallback to a toy hash embedder. When the model cannot be loaded and no
-explicit embedder is injected, the retriever raises ``RuntimeError`` (strict
-embedder mode introduced in issue #45). Tests and offline scripts may opt out
-by passing an embedder callable directly to :class:`HybridRetriever` or
-:func:`build_retriever`.
+fallback to a toy hash embedder while ``strict_embedder`` is enabled. When the
+model cannot be loaded and no explicit embedder is injected, the retriever
+raises ``RuntimeError`` by default (strict embedder mode introduced in issue
+#45). Tests and offline scripts may opt out by passing an embedder callable
+directly to :class:`HybridRetriever` / :func:`build_retriever`, or by setting
+``strict_embedder: false`` in a non-production config.
 
 Unified chunk format returned by :meth:`HybridRetriever.search` and by
 :func:`reciprocal_rank_fusion`::
@@ -160,10 +161,10 @@ def _cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
 def _hash_embedding(text: str, dim: int = 256) -> List[float]:
     """Deterministic bag-of-tokens hash embedding.
 
-    This is **never** used as a silent fallback by the retriever (strict
-    embedder mode, see :func:`_load_dense_embedder`). It is kept only for
-    test fixtures that pass it explicitly via ``embedder=_hash_embedding`` and
-    for benchmarking utilities that need a tokenizer-free baseline.
+    This is never used as a silent production fallback while strict embedder
+    mode is enabled (see :func:`_load_dense_embedder`). It is kept for test
+    fixtures, benchmarking utilities that need a tokenizer-free baseline, and
+    explicit non-strict development configs.
     """
     vec = [0.0] * dim
     for token in _tokenize(text):
@@ -178,29 +179,62 @@ def _hash_embedding(text: str, dim: int = 256) -> List[float]:
 _STRICT_EMBEDDER_ERROR = "Embedding model unavailable. Strict mode enabled."
 
 
+def resolve_strict_embedder(config: Optional[Mapping[str, Any]] = None) -> bool:
+    """Return whether missing dense models must fail fast.
+
+    ``strict_embedder`` defaults to ``True`` to preserve the production
+    contract from ADR-001 / issue #45: unavailable sentence-transformers models
+    must be visible at startup, not silently replaced by a lower-quality
+    approximation. Only an explicit ``strict_embedder: false`` opt-out enables
+    the deterministic hash fallback for local/offline work.
+    """
+    cfg = config or {}
+    raw = cfg.get("strict_embedder", True) if isinstance(cfg, Mapping) else True
+    if isinstance(raw, str):
+        return raw.strip().lower() not in {"0", "false", "no", "off"}
+    return bool(raw)
+
+
 def _load_dense_embedder(
     config: Optional[Dict[str, Any]] = None,
 ) -> Callable[[str], Sequence[float]]:
     """Load the real sentence-transformers embedder defined by ``config``.
 
+    The shipped production config sets ``strict_embedder: true`` and missing
+    dependencies/model files raise ``RuntimeError``. A non-production config
+    may set ``strict_embedder: false`` to use :func:`_hash_embedding` with a
+    WARNING log, making the degradation explicit and auditable.
+
     Raises:
-        RuntimeError: When the embedding model cannot be loaded. The error
-            message is fixed to ``"Embedding model unavailable. Strict mode
-            enabled."`` per the issue #45 contract.
+        RuntimeError: When the embedding model cannot be loaded while strict
+            mode is enabled. The error message is fixed to
+            ``"Embedding model unavailable. Strict mode enabled."`` per the
+            issue #45 contract.
     """
     cfg = config or {}
     model_name = str(cfg.get("model_name", "BAAI/bge-m3"))
     normalize = bool(cfg.get("normalize_embeddings", True))
+    strict_embedder = resolve_strict_embedder(cfg)
+
+    def _fallback(exc: Exception) -> Callable[[str], Sequence[float]]:
+        if strict_embedder:
+            raise RuntimeError(_STRICT_EMBEDDER_ERROR) from exc
+        logger.warning(
+            "Embedding model unavailable; strict_embedder=false, using "
+            "HashEmbedder fallback. error=%s",
+            exc,
+        )
+        return _hash_embedding
 
     try:
         from sentence_transformers import SentenceTransformer  # type: ignore
     except ImportError as exc:
-        raise RuntimeError(_STRICT_EMBEDDER_ERROR) from exc
+        return _fallback(exc)
 
     try:
         model = SentenceTransformer(model_name)
     except Exception as exc:  # noqa: BLE001
-        raise RuntimeError(_STRICT_EMBEDDER_ERROR) from exc
+        return _fallback(exc)
 
     def _embed(text: str) -> List[float]:
         vector = model.encode(
@@ -379,9 +413,9 @@ class HybridRetriever:
             or DEFAULT_PARENT_CONTEXT_MAX_CHARS
         )
         # Strict embedder mode (issue #45): when no embedder is injected by the
-        # caller we *must* load the configured sentence-transformers model.
-        # Failure to load raises ``RuntimeError`` — silently falling back to a
-        # toy hash embedder would mask data quality regressions.
+        # caller we load the configured sentence-transformers model. Production
+        # configs fail fast; only explicit non-strict configs may degrade to
+        # the deterministic hash baseline with a warning.
         self._embedder = embedder if embedder is not None else _load_dense_embedder(self.config)
         self._documents: List[_Document] = []
         self._bm25: Optional[_BM25] = None
@@ -897,28 +931,8 @@ class ChromaRetriever:
     def _load_embedder(self) -> Callable[[str], Sequence[float]]:
         if self._embedder is not None:
             return self._embedder
-        try:
-            from sentence_transformers import SentenceTransformer  # type: ignore
-        except ImportError as exc:
-            raise RuntimeError(_STRICT_EMBEDDER_ERROR) from exc
-        try:
-            model = SentenceTransformer(self.model_name)
-        except Exception as exc:  # noqa: BLE001
-            raise RuntimeError(_STRICT_EMBEDDER_ERROR) from exc
-
-        normalize = self._normalize
-
-        def _embed(text: str) -> List[float]:
-            vector = model.encode(
-                text,
-                normalize_embeddings=normalize,
-                convert_to_numpy=True,
-                show_progress_bar=False,
-            )
-            return [float(x) for x in vector.tolist()]
-
-        self._embedder = _embed
-        return _embed
+        self._embedder = _load_dense_embedder(self.config)
+        return self._embedder
 
     def _ensure_collection(self) -> Any:
         if self._collection is not None:

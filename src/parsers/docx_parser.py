@@ -45,6 +45,10 @@ class DocxParser(BaseParser):
             re.compile(pattern)
             for pattern in docx_config.get("list_marker_patterns", [])
         ]
+        self.read_list_styles = bool(docx_config.get("read_list_styles", True))
+        self.list_marker_detector = re.compile(
+            r"^\s*(?P<marker>[-–—•]|\d+[\.)]|[A-Za-zА-Яа-я][\.)])\s+"
+        )
         self.service_break_patterns = [
             re.compile(pattern)
             for pattern in docx_config.get(
@@ -78,7 +82,13 @@ class DocxParser(BaseParser):
         candidates: List[Tuple[str, Dict[str, Any]]] = []
         for paragraph_index, paragraph in enumerate(document.paragraphs, start=1):
             locator = {"type": "paragraph", "index": paragraph_index}
-            candidates.extend(self._text_candidates(paragraph.text, locator))
+            candidates.extend(
+                self._text_candidates(
+                    paragraph.text,
+                    locator,
+                    list_style=self._is_list_paragraph(paragraph),
+                )
+            )
         for table_index, table in enumerate(document.tables, start=1):
             candidates.extend(self._table_candidates(table, table_index=table_index))
 
@@ -113,7 +123,11 @@ class DocxParser(BaseParser):
                         "col": col_index,
                         "paragraph": paragraph_index,
                     }
-                    yield from self._text_candidates(paragraph.text, locator)
+                    yield from self._text_candidates(
+                        paragraph.text,
+                        locator,
+                        list_style=self._is_list_paragraph(paragraph),
+                    )
                 for nested_index, nested_table in enumerate(cell.tables, start=1):
                     nested_table_index = int(f"{table_index}{nested_index}")
                     yield from self._table_candidates(
@@ -121,16 +135,27 @@ class DocxParser(BaseParser):
                     )
 
     def _text_candidates(
-        self, raw_text: str, locator: Dict[str, Any]
+        self,
+        raw_text: str,
+        locator: Dict[str, Any],
+        *,
+        list_style: bool = False,
     ) -> Iterable[Tuple[str, Dict[str, Any]]]:
         fragments = str(raw_text or "").splitlines()
         for fragment_index, fragment in enumerate(fragments, start=1):
+            list_marker = self._list_marker(fragment)
             text = self._clean_text(fragment)
             if not text or self._is_service_break(text):
                 continue
             current_locator = dict(locator)
             if fragment_index > 1:
                 current_locator["fragment"] = fragment_index
+            if list_style or list_marker:
+                current_locator["list_path"] = self._build_list_path(
+                    locator,
+                    fragment_index=fragment_index,
+                    marker=list_marker,
+                )
             yield text, current_locator
 
     def _clean_text(self, text: str) -> str:
@@ -143,6 +168,39 @@ class DocxParser(BaseParser):
 
     def _is_service_break(self, text: str) -> bool:
         return any(pattern.search(text) for pattern in self.service_break_patterns)
+
+    def _is_list_paragraph(self, paragraph: Any) -> bool:
+        if not self.read_list_styles:
+            return False
+        style_name = str(getattr(getattr(paragraph, "style", None), "name", "") or "")
+        return "list" in style_name.lower()
+
+    def _list_marker(self, text: str) -> str:
+        match = self.list_marker_detector.match(text or "")
+        if not match:
+            return ""
+        return match.group("marker").strip().rstrip(".)")
+
+    def _build_list_path(
+        self,
+        locator: Dict[str, Any],
+        *,
+        fragment_index: int,
+        marker: str = "",
+    ) -> List[str]:
+        if locator.get("type") == "table":
+            path = [
+                f"table:{locator.get('table')}",
+                f"row:{locator.get('row')}",
+                f"col:{locator.get('col')}",
+                f"paragraph:{locator.get('paragraph')}",
+            ]
+        else:
+            path = [f"paragraph:{locator.get('index')}"]
+        if fragment_index > 1:
+            path.append(f"fragment:{fragment_index}")
+        path.append(f"item:{marker or fragment_index}")
+        return path
 
 
 def load_requirements(

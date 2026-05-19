@@ -7,11 +7,13 @@ before sending text to external LLM APIs. Patterns are loaded from
 Supported patterns (as of v2):
 
 - Email addresses
-- Russian phone numbers (+7 format)
+- Russian phone numbers (+7 and 8-prefix formats)
 - IP addresses
 - Internal domains (internal, corp, local)
-- Legal entity names following Russian prefixes (ООО, АО, ПАО, ЗАО, НАО, ОАО)
-- Surnames following the ИП (individual entrepreneur) prefix
+
+ФИО / legal entity / individual entrepreneur masking is intentionally deferred
+for MVP and guarded by tests so those replacement tokens are not emitted by
+accident.
 
 Each pattern entry supports the following keys:
 

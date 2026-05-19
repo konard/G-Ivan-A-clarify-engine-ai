@@ -7,6 +7,13 @@
 ## [Unreleased]
 
 ### Fixed
+- **PATCH: Code Review triage hardening (BL-26, issue #142).**
+  Added the code-review triage matrix, made `strict_embedder: true` explicit
+  while allowing an audited hash fallback only for `strict_embedder: false`,
+  keyed the Streamlit retriever cache by the md5 of `embedding_config.yaml`,
+  kept DOCX locators page-free with table/list traceability, and expanded
+  masking regex coverage for 8-prefix RU phones and multi-level internal
+  domains.
 - **PATCH: configurable LLM provider HTTP timeouts (issue #139).**
   `LLMClient` resolves per-provider `timeout` / `timeout_seconds` values before
   falling back to `OLLAMA_TIMEOUT`, `PROVIDER_TIMEOUT`,
