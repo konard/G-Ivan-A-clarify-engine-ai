@@ -31,6 +31,11 @@
   with `parent_id` / `section_id` / `parent_text`.
 
 ### Added
+- **BL-30 (issue #151):** Added an isolated canonical query cache PoC in
+  `scripts/poc/semantic_cache_poc.py`, covering Golden Set replay loading,
+  deterministic threshold sweeps (`0.90`, `0.95`, `0.97`), cache hit/latency/
+  token/accuracy metrics, optional `BAAI/bge-m3` embeddings, regression tests,
+  and draft ADR verdict in `docs/ADR/007-canonical-cache-draft.md`.
 - **BL-29 (issue #150):** KB UI analysis export now exposes `.xlsx`, `.docx`,
   and `.md` format selectors with session-state persistence, keeps the MVP
   mode locked to `create_new`, and generates downloads through `ExportRouter`
