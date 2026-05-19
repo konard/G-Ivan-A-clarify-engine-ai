@@ -7,6 +7,29 @@
 ## [Unreleased]
 
 ### Code
+- **CODE: BL-51 auto-detect Ollama path (issue #195).** Добавлены
+  `_resolve_ollama_executable()` и `_log_ollama_executable_once()` в
+  [`src/llm/client.py`](src/llm/client.py). Резолюция идёт в порядке
+  `shutil.which("ollama")` → `%LOCALAPPDATA%\Programs\Ollama\ollama.exe` →
+  `C:\Program Files\Ollama\ollama.exe`; при провале — детерминированная
+  `RuntimeError` с готовой командой `setx PATH ...` и ссылкой на runbook
+  §1.4a. `_call_ollama_rag` вызывает `_log_ollama_executable_once()`
+  одной строкой через `sanitize_log_record` (BL-23), поэтому путь
+  логируется ровно один раз на процесс и не ломает HTTP-вызов, если
+  бинарь не найден (демон может быть доступен по сети). Покрытие:
+  [`tests/test_ollama_resolution.py`](tests/test_ollama_resolution.py)
+  фиксирует три обязательных сценария DoD (PATH miss + Windows fallback
+  hit, `which` hit short-circuit, оба пустые → исключение с
+  инструкцией) плюс два кейса на one-shot logging.
+  [`tests/test_arm_deployment_runbook.py`](tests/test_arm_deployment_runbook.py)
+  получил `test_runbook_documents_bl51_ollama_path_guard`, который
+  проверяет наличие §1.4a с `setx PATH "%PATH%;%LOCALAPPDATA%\Programs\Ollama"`,
+  предупреждение о перезапуске CMD и обновлённую строку «Connection
+  refused» в §6. Linux/macOS fallback-пути оставлены как TODO в коде
+  (BL-51 scope — только Windows ARM, см.
+  [`docs/backlog/2026-05-20_backlog_arm-pilot-test-fixes_v1.md`](docs/backlog/2026-05-20_backlog_arm-pilot-test-fixes_v1.md)
+  §4.3). PII / маскирование: в логе фигурирует только путь к исполняемому
+  файлу — BL-23 sanitiser обрабатывает строку без правок.
 - **CODE: BL-50 `.env` startup validation (issue #194).** Добавлен
   startup-guard в новом модуле
   [`src/config_loader.py`](src/config_loader.py): `validate_env()`
