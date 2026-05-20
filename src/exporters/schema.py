@@ -131,7 +131,16 @@ def ensure_export_rows(
 
 
 def format_locator(locator: Mapping[str, Any] | None) -> str:
-    """Render parser locator metadata as a stable ``Ref`` string."""
+    """Render parser locator metadata as a stable ``Ref`` string.
+
+    The base layout follows the per-type contract documented in
+    ``docs/standards/export-markup.md`` §3. BL-59 adds two optional
+    suffixes — ``section="..."`` and ``span="..."`` — appended after the
+    type-specific fields whenever the boundary detector enriched the
+    locator. These suffixes are *purely additive*: locators produced by
+    legacy parsers (no ``section_number`` / ``span``) render exactly as
+    they did pre-BL-59.
+    """
     if not locator:
         return ""
 
@@ -146,6 +155,7 @@ def format_locator(locator: Mapping[str, Any] | None) -> str:
         column = locator.get("column") or locator.get("col")
         if column:
             parts.append(f'col="{_quote(column)}"')
+        _append_structural_suffix(parts, locator)
         return ", ".join(parts)
 
     if locator_type == "paragraph":
@@ -155,6 +165,7 @@ def format_locator(locator: Mapping[str, Any] | None) -> str:
             parts.append(f"fragment={locator.get('fragment')}")
         if locator.get("list_path"):
             parts.append(f'list_path="{_quote(_join_list_path(locator["list_path"]))}"')
+        _append_structural_suffix(parts, locator)
         return ", ".join(parts)
 
     if locator_type == "table":
@@ -166,12 +177,26 @@ def format_locator(locator: Mapping[str, Any] | None) -> str:
         ]
         if locator.get("list_path"):
             parts.append(f'list_path="{_quote(_join_list_path(locator["list_path"]))}"')
+        _append_structural_suffix(parts, locator)
         return ", ".join(parts)
 
     return ", ".join(
         f'{key}="{_quote(value)}"' if isinstance(value, str) else f"{key}={value}"
         for key, value in sorted(locator.items())
     )
+
+
+def _append_structural_suffix(
+    parts: List[str], locator: Mapping[str, Any]
+) -> None:
+    """Append BL-59 structural keys (``section``, ``span``) when present."""
+    section_number = locator.get("section_number")
+    if section_number:
+        parts.append(f'section="{_quote(section_number)}"')
+    span = locator.get("span")
+    if span:
+        rendered = _join_list_path(span)
+        parts.append(f'span="{_quote(rendered)}"')
 
 
 def _looks_like_export_row(item: Mapping[str, Any]) -> bool:
