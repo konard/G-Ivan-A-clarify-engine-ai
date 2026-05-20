@@ -53,6 +53,55 @@
   [PR #205](https://github.com/G-Ivan-A/clarify-engine-ai/pull/205).
 
 ### Code
+- **CODE+DOCS: BL-59 requirement atomization & structural parsing (issue #211).**
+  Парсеры `.docx` / `.xlsx` теперь распознают логические границы атомарных
+  требований, а не режут их «по абзацам». Реализован двухслойный гибридный
+  подход (см. дизайн-документ
+  [`docs/research/2026-05-20_bl-59_requirement-parsing_v1.md`](docs/research/2026-05-20_bl-59_requirement-parsing_v1.md)):
+  слой 1 — детерминированный rule-based детектор
+  [`src/parsers/requirement_boundary_detector.py`](src/parsers/requirement_boundary_detector.py)
+  (`RequirementBoundaryDetector.refine`), слой 2 — опциональная LLM-валидация
+  через локальный Ollama `qwen2.5:7b` (по умолчанию выключена, в данном PR
+  поставляется stub-реализация с предупреждением в логе, чтобы CI не требовал
+  Ollama). Поддерживаются три стратегии: `naive` (pass-through, безопасный
+  rollback, default при отсутствии секции `parsing` в конфиге),
+  `structural` (распознавание заголовков `^\d+(\.\d+)*\s`, проброс
+  `section_number` / `section_title` / `parent_id` в дочерние требования,
+  слияние «обезглавленных» continuation-фрагментов в той же ячейке
+  таблицы, извлечение перекрёстных ссылок «см. п.»/«согласно»/«в
+  соответствии с» в `locator.cross_refs`), `hybrid` (structural + LLM
+  при `parsing.use_llm_boundary_check: true`). Контракт
+  `load_requirements_by_extension` сохранён байт-в-байт — функция
+  по-прежнему возвращает `[{id, text, locator}]`, а enrichment локатора
+  строго аддитивен (новые ключи `section_number`, `section_title`,
+  `parent_id`, `cross_refs`, `block_type`, `span` добавляются только при
+  распознавании структуры). `src.exporters.schema.format_locator` теперь
+  печатает опциональные суффиксы `section="7.2.39"` и `span="para98/para99"`
+  после type-specific полей, поэтому `[Ref]`-маркеры в DOCX/MD-отчётах
+  становятся точнее без регрессии legacy-локаторов. Конфигурация:
+  [`configs/parsing_config.yaml`](configs/parsing_config.yaml) §`parsing`
+  фиксирует `strategy: "structural"` по умолчанию (для CI-baseline всегда
+  можно переключить на `naive`), список requirement-глаголов (BL-22/BL-27
+  совместимость), регулярки заголовков и cross-refs, BL-22 decoding lock
+  для LLM-слоя (`temperature: 0.0`, `top_p: 1.0`, `seed: 42`). Покрытие:
+  [`tests/test_requirement_parsing.py`](tests/test_requirement_parsing.py)
+  17 кейсов — pass-through стратегии `naive`, проброс контекста, детекция
+  cross-refs (включая внутри табличной ячейки), continuation merge,
+  hybrid → structural fallback с warning в логе, backward compat
+  (default strategy = `naive`, dispatcher с конфигом `strategy: naive`
+  не меняет ключи локатора), сохранность исходных ключей для paragraph /
+  table / cell, golden-set roundtrip ≥ 90 % accuracy на
+  [`data/parsing_golden_set_v1.jsonl`](data/parsing_golden_set_v1.jsonl)
+  (20 вручную размеченных сценариев), perf-тест на синтетических 50
+  страницах укладывается в бюджет ≤ 30 сек CPU-only. Backward compat:
+  при отсутствии секции `parsing` в конфиге детектор молча возвращается
+  в `naive`, поэтому ExportRouter / Pipeline / прежние интеграционные
+  тесты работают без изменений. PII / маскирование: детектор оперирует
+  только структурой документа (нумерация разделов, заголовки, ссылки),
+  пользовательских данных не логирует. NFR-04 (RU-residency) и NFR-08
+  (CPU-only) сохранены: LLM-слой опционален и активируется только при
+  явном включении флага в локальной конфигурации.
+
 - **CODE+DOCS: BL-55 first-response UX (spinner + warmup) (issue #199).**
   Спиннер «Спрашиваем LLM…» в [`src/ui/constants.py`](src/ui/constants.py)
   теперь содержит явное предупреждение «⏱ Первый ответ на CPU может
