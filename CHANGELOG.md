@@ -7,6 +7,75 @@
 ## [Unreleased]
 
 ### Documentation
+- **RESEARCH: BL-60 next-gen RAG architecture, LLM routing & infra tiers (issue #214).**
+  Сводное исследование архитектуры следующего поколения по итогам пилота
+  на АРМ ([issue #182](https://github.com/G-Ivan-A/clarify-engine-ai/issues/182))
+  и retrospective BL-57/58/59. Цель — закрыть разрыв между демо-монолитом
+  (Streamlit + ChromaDB + жёсткая цепочка `GigaChat → OpenRouter → Ollama`)
+  и corp-инфрой заказчика (Elasticsearch on-prem, несколько БА, разные
+  классы запросов). Артефакт:
+  [`docs/research/2026-05-20_bl-60_next-gen-architecture_v1.md`](docs/research/2026-05-20_bl-60_next-gen-architecture_v1.md)
+  — 15 разделов, ~836 строк. Закрывает все 8 пунктов DoD issue #214:
+  (1) **сравнительные матрицы** — ES 8.x vs Qdrant vs ChromaDB vs Weaviate
+  vs OpenSearch (§4.2), 4 LLM-профиля × 3 router-подхода (rule vs ML vs
+  LLM-as-router, §4.1), Local vs External LLM strategy per tier (§7.2);
+  (2) **Mermaid-диаграмма** микросервисной декомпозиции с границами
+  сервисов, потоками данных и fallback-цепочками (§5.1) — 7 сервисов:
+  UI/API Gateway, Ingestion, Indexing, Retrieval, Generation+Routing,
+  Validation, PII Gateway + object-store + audit DB; (3) **три
+  инфраструктурных тира** (🟢 Бюджетный $50–150/мес → 🟡 Оптимальный
+  $300–800/мес → 🔵 Оптимистичный $1500–3000/мес) с CPU/RAM/VRAM/Storage/
+  Network спецификациями, Year-1 TCO $13.6k / $49.6k / $165.2k и
+  рекомендацией старта пилота на 🟡 (§7.1, §7.3); (4) **PoC-план** —
+  четыре эксперимента (ES single-node + RRF + cross-encoder rerank,
+  rule-based router < 10 мс, parser layer 2 LLM-validator из BL-59,
+  опциональный self-correction loop) с метриками (`hit@5`, `MRR`,
+  routing accuracy, latency p50/p95, F1 на BL-59 boundary cases) и
+  сроками 4–6 недель (§8); (5) **API-контракты** (OpenAPI 3.1
+  snippets) между Ingestion / Retrieval / Generation / Validation
+  сервисами + Audit DB SQL-схема `audit_runs` (§5.8, §6.5);
+  (6) **stage-gate решения для PO** — MUST на Sprint 6 (ES PoC,
+  rule-based router, выделение Ingestion в воркер), SHOULD на Sprint 6
+  (cross-encoder reranker, audit DB), MAY на Sprint 7+ (ML-router,
+  self-correction), defer (multi-tenancy, KServe, ColBERT v2);
+  (7) **инварианты, которые нельзя ломать** — контракт
+  `HybridRetriever.retrieve()`, `LLMClient.generate_rag_response()`,
+  чтение `pipeline.fallback_providers` из
+  [`configs/llm_config.yaml`](configs/llm_config.yaml), `STRICT_MODE`
+  (`strict_rag_mode: true`, `strict_min_score: 0.30`), masked RAG
+  channel (BL-04), decoding lock (`temperature: 0.1, top_p: 0.9,
+  seed: 42`, BL-22), metadata schema BL-02 — все они становятся
+  контрактами Validation Service (§5.6) и Generation Service (§5.5)
+  вместо глобальных флагов pipeline; (8) **risks & mitigations** —
+  10 рисков (R-60-01..R-60-10) c P/I-оценкой, включая overengineering
+  («strangler fig» через toggle `service_mode: monolith|services`),
+  GPU-бюджет (старт на rented RTX 4090 + `q4_K_M` quantization),
+  ES-tuning сложность (привлечь corp ES-инженера на 1 спринт).
+  Безопасность: PII Gateway (§5.7) — обязательная точка перед любым
+  external call, NFR-04 RU-резидентность сохранена (GigaChat primary
+  + Ollama local + OpenRouter только `use_test_data_mode: true`),
+  152-ФЗ-compliant audit immutability (INSERT-only, retention 365 дн,
+  cold-tier S3 через 90 дн), `sanitize_log_record` (BL-23) расширен
+  per-service вместо глобального singleton. Международные ссылки:
+  FrugalGPT ([arXiv:2305.05176](https://arxiv.org/abs/2305.05176)),
+  RouteLLM ([arXiv:2406.18665](https://arxiv.org/abs/2406.18665)),
+  ES Hybrid + RRF docs, vLLM/KServe model-serving patterns,
+  Self-Refine ([arXiv:2303.17651](https://arxiv.org/abs/2303.17651)),
+  RAGAS, NIST AI RMF, 152-ФЗ guidelines. Scope Note (§10 issue #214):
+  **это исследование, не реализация** — никаких изменений в `src/`,
+  `configs/`, `prompts/`; все рекомендации триггерят отдельные
+  BL-задачи Sprint 6 (BL-61..BL-66) и потенциальный новый ADR-010
+  «Microservices decomposition & Elasticsearch migration» после
+  `Accepted` PO/Tech Lead/Infra. Линковка: research ссылается на
+  BL-58 ([`docs/research/2026-05-21_bl-57_retrieval-architecture_v1.md`](docs/research/2026-05-21_bl-57_retrieval-architecture_v1.md))
+  как источник query-expansion-стратегии (Pareto-оптимум Sprint 4) и
+  BL-59 ([`docs/research/2026-05-20_bl-59_requirement-parsing_v1.md`](docs/research/2026-05-20_bl-59_requirement-parsing_v1.md))
+  как источник двухслойного парсинга (rule-based + LLM-validator) —
+  обе рекомендации интегрированы в §4.3 (Ingestion Service) и §5.6
+  (Validation Service) новой архитектуры. Тесты / CI: исследование
+  безкодовое, поэтому добавление автотестов не требуется; DoD-критерии
+  валидируются ревьюерами через PR-checklist в [PR #215](https://github.com/G-Ivan-A/clarify-engine-ai/pull/215).
+
 - **RESEARCH: BL-57 advanced retrieval architecture & international practices analysis (issue #209).**
   Глубокое исследование retrieval-уровня RAG для трёх кейсов, на которых
   текущая связка `BM25 + Dense (bge-m3) + RRF(k=60)` + `strict_min_score: 0.30`
