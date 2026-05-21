@@ -7,6 +7,33 @@
 ## [Unreleased]
 
 ### Documentation
+- **RESEARCH: BL-61 market research for microservices components (issue #216).**
+  Добавлено комплексное исследование рынка альтернатив для 13 компонентов
+  микросервисной архитектуры BL-60:
+  [`docs/research/2026-05-21_bl-61_market-research_v1.md`](docs/research/2026-05-21_bl-61_market-research_v1.md).
+  Документ сравнивает 10+ вариантов по каждому направлению: Vector DB /
+  Search Engine, Message Bus, LLM Orchestration, Document Parsing,
+  Embeddings, Local LLM Serving, Cross-Encoder Reranker, Observability,
+  Audit DB, Object Storage, Cache, API Gateway, PII Masking. Для каждого
+  варианта зафиксированы ответственность, риски, преимущества, публичная
+  стоимость или quote-only статус, ресурсы, трудоемкость внедрения,
+  лицензия, RU-резидентность и компонентные критерии вроде hybrid search,
+  delivery guarantees, OCR/table quality, latency, throughput, retention,
+  S3 compatibility, Redis API compatibility и compliance. По каждому
+  компоненту даны Budget / Optimal / Enterprise рекомендации с Year-1 TCO
+  диапазонами и migration paths, чтобы избежать жесткой привязки к
+  Elasticsearch, NATS, конкретному SaaS или GPU-инфраструктуре. Основная
+  рекомендация Sprint 6: проектировать replaceable provider contracts
+  (`SearchBackend`, `MessageBus`, `EmbeddingProvider`, `ObjectStore`,
+  `AuditStore`, `PiiGateway`) и начинать с self-hosted RU-resident стека:
+  Qdrant/OpenSearch, NATS JetStream, Docling + Unstructured, bge-m3,
+  Ollama/vLLM, bge-reranker, OpenTelemetry + Grafana stack, PostgreSQL +
+  ClickHouse, MinIO, Redis/Valkey, FastAPI + NGINX/Kong, Presidio + custom
+  RU recognizers. Enterprise SaaS варианты (Pinecone, OpenAI/Cohere/Voyage,
+  cloud OCR, Datadog/New Relic/Dynatrace, S3/GCS/Azure, cloud DLP) вынесены
+  за compliance/budget gate. Прайсы и capability links проверены по
+  официальным источникам на 2026-05-21 и собраны в Source Register.
+
 - **RESEARCH: BL-60 next-gen RAG architecture, LLM routing & infra tiers (issue #214).**
   Сводное исследование архитектуры следующего поколения по итогам пилота
   на АРМ ([issue #182](https://github.com/G-Ivan-A/clarify-engine-ai/issues/182))
