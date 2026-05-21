@@ -7,6 +7,19 @@
 ## [Unreleased]
 
 ### Documentation
+- **DOCS: BL-60-ru — Russian adaptation with educational annotations for non-technical stakeholders.**
+  Разделы 4–15 BL-60 research
+  [`docs/research/2026-05-20_bl-60_next-gen-architecture_v1.md`](docs/research/2026-05-20_bl-60_next-gen-architecture_v1.md)
+  дополнены русскоязычными блоками `🧠 Пояснение для БА`, таблицами
+  `📚 Что почитать` с RU/EN источниками и датой проверки ссылок
+  `2026-05-21`, а также `details`-заметками для технических ревьюеров,
+  фиксирующими backward compatibility исходного технического текста.
+  Добавлен корневой индекс [`docs/README.md`](docs/README.md) со ссылкой
+  на BL-60-ru adaptation и regression-тест
+  [`tests/test_bl60_ru_adaptation_docs.py`](tests/test_bl60_ru_adaptation_docs.py),
+  который проверяет наличие educational blocks, checked-link dates,
+  changelog marker и docs index link.
+
 - **RESEARCH: BL-61 market research for microservices components (issue #216).**
   Добавлено комплексное исследование рынка альтернатив для 13 компонентов
   микросервисной архитектуры BL-60:
