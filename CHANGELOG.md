@@ -7,6 +7,21 @@
 ## [Unreleased]
 
 ### Documentation
+- **RESEARCH: BL-62 synthesis of optimized architecture options (budget vs target).**
+  Добавлен синтез исследований BL-60 / BL-61 и комментариев PO/support:
+  [`docs/research/2026-05-21_bl-62_synthesis-optimized-architectures_v1.md`](docs/research/2026-05-21_bl-62_synthesis-optimized-architectures_v1.md).
+  Документ фиксирует два сценария: бюджетно-оптимизированный MVP/pilot
+  (`GitHub Pages` + минимальный VPS `<= 2100 руб/мес` для backend/vector
+  storage + offline embeddings + external LLM routing) и
+  целе-оптимизированный production-capable pilot (Qdrant/OpenSearch/ES,
+  NATS, LiteLLM, GPU-enabled endpoint, audit/observability, PII Gateway as
+  toggle). Для обоих вариантов описаны Mermaid-схемы, TCO на 12 месяцев,
+  migration roadmap с rollback, риски, критерии выбора и минимальная
+  валидация через `evaluate_rag.py`, router-golden checks и `smoke на ARM`.
+  Отдельно зафиксировано разрешение конфликта ограничений issue #226:
+  RU-резидентность и runtime PII masking не блокируют MVP, но остаются
+  architectural capability / enterprise gate.
+
 - **DOCS: BL-61.1 business-friendly education blocks for market research.**
   Добавлен v2-артефакт
   [`docs/research/2026-05-21_bl-61_market-research_ru-education_v2.md`](docs/research/2026-05-21_bl-61_market-research_ru-education_v2.md)
