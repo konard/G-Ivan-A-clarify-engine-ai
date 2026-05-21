@@ -114,6 +114,27 @@
 
 ## 4. Предлагаемые решения (бизнес-уровень)
 
+### 🧠 Пояснение для БА
+> Раздел переводит архитектурные варианты в язык управленческих решений: какой запрос вести локально, когда платить за внешнюю LLM, почему гибридный поиск снижает риск ложного `НД`, и где нужен human-in-the-loop. Для бизнеса это означает управляемый баланс стоимости, скорости и качества: типовые вопросы закрываются дешёвым локальным маршрутом, сложные уходят в более сильную модель, а PII-sensitive сценарии не покидают контролируемый контур. Техническая деталь: все решения опираются на сигналы router/classifier, `STRICT_MODE`, BM25 + kNN + RRF и контракт `HybridRetriever.retrieve()`.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [FrugalGPT: How to Use Large Language Models While Reducing Cost and Improving Performance](https://arxiv.org/abs/2305.05176) | EN | опубл. 2023-05-09; проверено 2026-05-21 | Объясняет, почему routing по cost/quality может снижать расходы без потери качества. |
+| [RouteLLM: Learning to Route LLMs with Preference Data](https://arxiv.org/abs/2406.18665) | EN | опубл. 2024-06-26; проверено 2026-05-21 | Даёт академический контекст для ML-router после rule-based MVP. |
+| [Elastic Hybrid Search](https://www.elastic.co/docs/solutions/search/hybrid-search) | EN | rolling docs; проверено 2026-05-21 | Показывает, как BM25 и vector search объединяются в production-поиске. |
+| [О векторных базах данных простым языком](https://habr.com/ru/companies/ruvds/articles/863704/) | RU | опубл. 2024-12-06; проверено 2026-05-21 | Нетривиальное объяснение embeddings/vector search для не-технической аудитории. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходный технический текст раздела 4 сохранён ниже без удаления. Английские
+термины (`Dynamic LLM Routing`, `BM25`, `kNN`, `RRF`, `STRICT_MODE`,
+`Self-correction loop`) оставлены в исходной форме, чтобы Tech Lead мог
+сверить архитектурные контракты с BL-60 research и будущими Sprint 6 задачами.
+
+</details>
+
 ### 4.1. Dynamic LLM Routing
 
 **Задача.** Направлять запрос к оптимальной модели без участия пользователя, минимизируя стоимость и latency при сохранении точности и compliance.
@@ -302,6 +323,26 @@ POST clarify_engine_kb_v2/_search
 ---
 
 ## 5. Архитектура взаимодействия компонентов (Микросервисы)
+
+### 🧠 Пояснение для БА
+> Микросервисы здесь не самоцель, а способ убрать узкое место Streamlit-монолита: загрузка документов, поиск, генерация ответа и валидация перестают блокировать друг друга. Для бизнеса это даёт масштабирование пилота: несколько БА могут работать параллельно, сбой reranker не останавливает весь продукт, а разные команды могут менять компоненты по очереди. Техническая деталь: миграция идёт через strangler fig и feature flag `service_mode: monolith|services`, поэтому текущие контракты `src/` остаются совместимыми.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [Microservices by Martin Fowler and James Lewis](https://martinfowler.com/articles/microservices.html) | EN | опубл. 2014-03-25; проверено 2026-05-21 | Базовые принципы service boundary, independent deployability и decentralized data. |
+| [NATS JetStream Concepts](https://docs.nats.io/nats-concepts/jetstream) | EN | rolling docs; проверено 2026-05-21 | Понимание durable message bus для ingestion/indexing/audit событий. |
+| [Основные паттерны микросервисной архитектуры](https://habr.com/ru/articles/904954/) | RU | опубл. 2025-04-27; проверено 2026-05-21 | Русскоязычное объяснение Strangler Fig, API Gateway, Service Mesh и Database per Service. |
+| [Разбираемся в проектировании микросервисов](https://habr.com/ru/companies/reksoft/articles/864206/) | RU | опубл. 2024-12-05; проверено 2026-05-21 | Объясняет границы сервисов через business capability и DDD. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходная схема взаимодействия компонентов сохранена ниже: Mermaid-диаграмма,
+service-to-code mapping, API snippets и migration principle. Добавленные
+пояснения не меняют предложенную декомпозицию и не добавляют runtime scope.
+
+</details>
 
 ### 5.1. Mermaid-диаграмма (полная схема)
 
@@ -502,6 +543,26 @@ ValidationResult:
 
 ## 6. Cross-cutting concerns
 
+### 🧠 Пояснение для БА
+> Cross-cutting concerns — это общие правила, которые нужны всем сервисам: логи, метрики, трассировка, health-checks, security и audit. Для бизнеса это страховка от «невоспроизводимых» сбоев: когда пользователь видит плохой ответ или задержку, команда может найти, где именно возникла проблема и сколько это стоило. Техническая деталь: OpenTelemetry, Prometheus/Grafana, NATS/RabbitMQ и Audit DB дают сквозной `run_id` от UI до LLM и обратно.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [OpenTelemetry Documentation](https://opentelemetry.io/docs/) | EN | rolling docs; проверено 2026-05-21 | Стандарт сбора traces, metrics и logs в распределённых системах. |
+| [RabbitMQ Reliability Guide](https://www.rabbitmq.com/docs/reliability) | EN | rolling docs; проверено 2026-05-21 | Что означают acknowledgements, durable queues и delivery guarantees. |
+| [Трассировка сервисов через очередь сообщений. OpenTelemetry, NATS](https://habr.com/ru/articles/723248/) | RU | опубл. 2023-03-17; проверено 2026-05-21 | Практический пример trace context через message bus. |
+| [Как внедрить наблюдаемость в микросервисное приложение](https://habr.com/ru/articles/865288/) | RU | опубл. 2024-12-10; проверено 2026-05-21 | Простое объяснение роли metrics/logs/traces для поддержки SLA. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Технические требования к observability, health checks, message bus, deployment
+topology, audit DB и compliance оставлены ниже без удаления. Добавленные блоки
+только объясняют бизнес-ценность этих требований.
+
+</details>
+
 ### 6.1. Observability
 
 | Уровень | Технология | Что хранится |
@@ -588,6 +649,26 @@ CREATE INDEX idx_audit_tenant_ts ON audit_runs (tenant_id, ts DESC);
 
 ## 7. Требования к инфраструктуре и железу
 
+### 🧠 Пояснение для БА
+> Инфраструктурные тиры отвечают на вопрос «сколько стоит следующий уровень качества и скорости». Бюджетный тир подходит для проверки гипотез, оптимальный — для стабильного пилота, оптимистичный — для масштабирования на много пользователей и строгие SLA. Техническая деталь: главные драйверы TCO — GPU/VRAM для local LLM, Elasticsearch/Qdrant/OpenSearch для search, storage для audit/object data и доля DevOps/SRE.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [vLLM Documentation](https://docs.vllm.ai/) | EN | rolling docs; проверено 2026-05-21 | Понимание GPU-serving, batching и почему VRAM влияет на latency/cost. |
+| [Hugging Face Text Generation Inference](https://huggingface.co/docs/text-generation-inference) | EN | rolling docs; проверено 2026-05-21 | Альтернативный подход к self-hosted LLM serving. |
+| [Тарифы GigaChat API](https://developers.sber.ru/docs/ru/gigachat/api/tariffs) | RU | rolling docs; проверено 2026-05-21 | Ориентир для external LLM token-cost в RU-контуре. |
+| [Yandex Foundation Models: тарификация](https://yandex.cloud/ru/docs/foundation-models/pricing) | RU | rolling docs; проверено 2026-05-21 | RU-альтернатива для расчёта managed LLM затрат. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходные таблицы CPU/RAM/VRAM/Storage/Network, deployment matrix и Year-1 TCO
+сохранены ниже. Добавленный блок не меняет численные оценки и выбор стартового
+тира `🟡 Оптимальный`.
+
+</details>
+
 ### 7.1. Сравнительная таблица трёх тиров
 
 | Параметр | 🟢 Бюджетный (MVP / Пилот) | 🟡 Оптимальный (Prod-Start) | 🔵 Оптимистичный (Scale / Enterprise) |
@@ -645,6 +726,26 @@ CREATE INDEX idx_audit_tenant_ts ON audit_runs (tenant_id, ts DESC);
 ---
 
 ## 8. План PoC (минимум 3 эксперимента)
+
+### 🧠 Пояснение для БА
+> PoC — это способ не покупать архитектуру «на веру»: каждый дорогой выбор проверяется отдельным экспериментом с метриками. Для бизнеса это снижает риск перерасхода бюджета: ES, router, parser и self-correction проходят stage gate, и только доказавший пользу компонент идёт в Sprint 6 implementation. Техническая деталь: качество фиксируется через `hit@5`, `MRR`, F1, latency p95, routing accuracy и сравнение с текущим ChromaDB baseline.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [RAGAS Documentation](https://docs.ragas.io/) | EN | rolling docs; проверено 2026-05-21 | Метрики качества RAG, которые можно использовать в PoC gate. |
+| [Elastic Reciprocal Rank Fusion](https://www.elastic.co/guide/en/elasticsearch/reference/current/rrf.html) | EN | rolling docs; проверено 2026-05-21 | Почему RRF подходит для сравнения BM25 и kNN результатов. |
+| [Подводные камни векторного поиска по базе знаний](https://habr.com/ru/articles/992760/) | RU | опубл. 2026-02-04; проверено 2026-05-21 | Практическое предупреждение о рисках naive vector search на базе знаний. |
+| [Полнотекстовый поиск vs. Векторный поиск](https://habr.com/ru/amp/publications/852242/) | RU | проверено 2026-05-21 | Помогает объяснить, зачем PoC сравнивает lexical и semantic стратегии. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходный PoC-план с четырьмя экспериментами, наборами данных, метриками,
+сроками и stage gates сохранён ниже. Добавленный блок только поясняет, как
+этот план использовать для управленческого решения.
+
+</details>
 
 ### 8.1. PoC-1: Elasticsearch hybrid search (Sprint 6, week 1–2)
 
@@ -706,6 +807,25 @@ PoC-4 Self-corr ───► решение по Validation Service┘          
 
 ## 9. Risks & Mitigations
 
+### 🧠 Пояснение для БА
+> Риски в этом разделе — это не список причин отказаться от архитектуры, а карта управляемых ограничений: где нужен специалист, где требуется feature flag, где обязательна проверка лицензии. Для бизнеса важно, что у каждого риска есть mitigation: можно начать с single-node, shadow-mode, local-only fallback или ручного review вместо «большого взрыва». Техническая деталь: ключевые механизмы снижения риска — circuit breaker, `service_mode` toggle, rollback path и contract tests.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [CircuitBreaker by Martin Fowler](https://martinfowler.com/bliki/CircuitBreaker.html) | EN | опубл. 2014-03-06; проверено 2026-05-21 | Объясняет, как не допустить каскадных отказов между сервисами. |
+| [NIST AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework) | EN | AI RMF 1.0 опубл. 2023-01-26; проверено 2026-05-21 | Рамка для обсуждения AI-risk без привязки к конкретному vendor. |
+| [Circuit Breaker в микросервисах](https://habr.com/ru/articles/1025394/) | RU | опубл. 2026-04-22; проверено 2026-05-21 | Русскоязычный пример защиты от каскадных отказов. |
+| [Сервис-ориентированная архитектура и антипаттерны](https://habr.com/ru/amp/publications/342526/) | RU | проверено 2026-05-21 | Помогает объяснить риск distributed monolith и overengineering. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходная risk table `R-60-01..R-60-10` сохранена ниже. Добавленные пояснения не
+меняют вероятности, impact и mitigation, а переводят их в язык принятия решений.
+
+</details>
+
 | ID | Risk | P | I | Mitigation |
 |----|------|:-:|:-:|------------|
 | R-60-01 | ES tuning слишком сложен для текущей команды (нет ES-инженера фуллтайм) | M | H | Привлечь corp ES-инженера заказчика на 1 спринт; начать с single-node + готовых RRF-templates; контракт через [`docs/standards/api/`](../standards/) |
@@ -723,6 +843,25 @@ PoC-4 Self-corr ───► решение по Validation Service┘          
 
 ## 10. Безопасность и compliance (детально)
 
+### 🧠 Пояснение для БА
+> Security/compliance здесь отвечает на вопрос «можем ли мы показать систему заказчику без риска утечки персональных данных». Бизнес-смысл PII Gateway, RU-резидентности и audit immutability — доказуемо контролировать, что внешняя LLM не получает чувствительные данные, а каждый спорный ответ можно расследовать. Техническая деталь: `mask_context_chunks`, `use_test_data_mode`, `prompt_id`, `model_version`, INSERT-only audit и retention policy становятся обязательными контрактами.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [Microsoft Presidio Documentation](https://microsoft.github.io/presidio/) | EN | rolling docs; проверено 2026-05-21 | Практический reference для PII detection/anonymization pipeline. |
+| [NIST Privacy Framework](https://www.nist.gov/privacy-framework) | EN | framework v1.0 опубл. 2020-01-16; проверено 2026-05-21 | Структура privacy-risk управления, полезная для review с заказчиком. |
+| [Федеральный закон №152-ФЗ «О персональных данных»](https://www.consultant.ru/document/cons_doc_LAW_61801/) | RU | ред. проверена 2026-05-21 | Юридический контекст RU-резидентности, обработки и хранения персональных данных. |
+| [152-ФЗ и LLM несовместимы по умолчанию](https://habr.com/ru/articles/1015694/) | RU | проверено 2026-05-21 | Прикладной пример обезличивания, HMAC-аудита и retention policy для LLM. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходная security/compliance матрица сохранена ниже. Добавленные пояснения
+не меняют NFR-04/NFR-05, PII Gateway assert и audit-retention требования.
+
+</details>
+
 | Контроль | Реализация | Статус (после Sprint 6 migration) |
 |----------|------------|-----------------------------------|
 | **NFR-04 RU-резидентность** | Local LLM + GigaChat (RU); OpenRouter — только `use_test_data_mode: true`; PII Gateway-assert | ✅ сохранён |
@@ -738,6 +877,26 @@ PoC-4 Self-corr ───► решение по Validation Service┘          
 ---
 
 ## 11. Артефакты этого PR
+
+### 🧠 Пояснение для БА
+> Артефакты — это «что именно будет передано на ревью» и как потом воспроизвести выводы. Для бизнеса это снижает риск потери контекста: исследование, changelog и PoC-stubs показывают не только решение, но и путь проверки. Техническая деталь: PR остаётся research-only, а любые production изменения должны идти отдельными BL-задачами после acceptance.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) | EN | спецификация 1.1.0; проверено 2026-05-21 | Формат, почему changelog-marker должен быть понятным и машинно читаемым. |
+| [Semantic Versioning](https://semver.org/) | EN | SemVer 2.0.0; проверено 2026-05-21 | Контекст для версионирования документов и будущих API contracts. |
+| [Keep a Changelog на русском](https://keepachangelog.com/ru/1.1.0/) | RU | спецификация 1.1.0; проверено 2026-05-21 | Русская версия правил changelog для PO/BA review. |
+| [Семантическое Версионирование на русском](https://semver.org/lang/ru/) | RU | SemVer 2.0.0; проверено 2026-05-21 | Объясняет, когда менять MAJOR/MINOR/PATCH в документах и API. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходная таблица артефактов и описание PoC harness stubs сохранены ниже.
+Добавленный блок не добавляет production scope и не меняет запрет на изменения
+в `src/`, `configs/`, `prompts/`.
+
+</details>
 
 | Артефакт | Путь | Назначение |
 |----------|------|-------------|
@@ -771,11 +930,30 @@ experiments/bl60_architecture_poc/
 
 ## 12. Международные практики и ссылки
 
+### 🧠 Пояснение для БА
+> Этот раздел нужен, чтобы отделить локальное мнение команды от практик, которые уже проверяются международным рынком. Для бизнеса это повышает доверие к roadmap: выбранные подходы не уникальны для одного проекта, а сопоставимы с research papers, vendor docs и open-source практиками. Техническая деталь: ссылки покрывают routing, hybrid search, rerank, model serving, observability, privacy и validation.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [Self-Refine: Iterative Refinement with Self-Feedback](https://arxiv.org/abs/2303.17651) | EN | опубл. 2023-03-30; проверено 2026-05-21 | Научный контекст self-correction loop для validation service. |
+| [BAAI/bge-reranker-large](https://huggingface.co/BAAI/bge-reranker-large) | EN | model card; проверено 2026-05-21 | Практический reference для cross-encoder rerank в RAG. |
+| [Векторный поиск: как выбрать систему и не пожалеть](https://habr.com/ru/companies/tensor/articles/970480/) | RU | опубл. 2025-12-17; проверено 2026-05-21 | Русскоязычный обзор trade-off vector search систем. |
+| [О векторных базах данных простым языком](https://habr.com/ru/companies/ruvds/articles/863704/) | RU | опубл. 2024-12-06; проверено 2026-05-21 | Базовое объяснение embeddings/vector DB для нетехнического review. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходная таблица международных практик и ссылок сохранена ниже. Добавленный
+блок делает раздел пригодным для BA/PO чтения, но не заменяет Source Register.
+
+</details>
+
 | Направление | Практика / Стандарт | Источник | Применимость BL-60 |
 |-------------|---------------------|----------|--------------------|
 | **LLM Routing** | FrugalGPT: How to Use Large Language Models While Reducing Cost and Improving Performance | [arXiv:2305.05176](https://arxiv.org/abs/2305.05176) | ✅ Обоснование dynamic routing по cost/quality (§4.1) |
 | **LLM Routing** | RouteLLM: Learning to Route LLMs with Preference Data | [arXiv:2406.18665](https://arxiv.org/abs/2406.18665) | ✅ Подход для ML-Router Sprint 7+ |
-| **Hybrid Search** | Elasticsearch Hybrid Search: Combining BM25 and kNN | [Elastic docs: hybrid search](https://www.elastic.co/guide/en/elasticsearch/reference/current/hybrid-search.html) | ✅ MUST §4.2 |
+| **Hybrid Search** | Elasticsearch Hybrid Search: Combining BM25 and kNN | [Elastic docs: hybrid search](https://www.elastic.co/docs/solutions/search/hybrid-search) | ✅ MUST §4.2 |
 | **Hybrid Search RRF** | RRF in Elasticsearch 8.8+ | [ES Reciprocal Rank Fusion](https://www.elastic.co/guide/en/elasticsearch/reference/current/rrf.html) | ✅ MUST §4.2 |
 | **Re-ranking** | Cross-Encoder Re-ranking for RAG | [Cohere Rerank Guide](https://docs.cohere.com/docs/rerank-2), [`BAAI/bge-reranker-large`](https://huggingface.co/BAAI/bge-reranker-large) | ✅ SHOULD §5.4 |
 | **Microservices AI** | Model Serving Patterns (vLLM, KServe) | [vLLM docs](https://docs.vllm.ai/), [KServe Docs](https://kserve.github.io/website/) | ✅ MUST для LocalLLM §5.5 |
@@ -790,6 +968,25 @@ experiments/bl60_architecture_poc/
 
 ## 13. Открытые вопросы для PO / Tech Lead / Infra
 
+### 🧠 Пояснение для БА
+> Открытые вопросы — это список решений, которые нельзя корректно принять только на уровне разработки: нужны данные от заказчика, бюджета и инфраструктуры. Для бизнеса это удобный agenda для review-встречи: если ответить на вопросы про ES версию, GPU-бюджет, multi-tenancy и migration window, Sprint 6 можно планировать без скрытых допущений. Техническая деталь: ответы определяют ADR-010, выбор search backend, router fail behaviour и default self-correction policy.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [Architecture Decision Records](https://adr.github.io/) | EN | проверено 2026-05-21 | Как фиксировать архитектурные решения после review. |
+| [MADR: Markdown Architectural Decision Records](https://adr.github.io/madr/) | EN | проверено 2026-05-21 | Пример markdown-шаблона для будущего ADR-010. |
+| [Разбираемся в проектировании микросервисов](https://habr.com/ru/companies/reksoft/articles/864206/) | RU | опубл. 2024-12-05; проверено 2026-05-21 | Помогает PO/BA задавать вопросы про границы сервисов и данные. |
+| [Основные паттерны микросервисной архитектуры](https://habr.com/ru/articles/904954/) | RU | опубл. 2025-04-27; проверено 2026-05-21 | Контекст для обсуждения Strangler Fig, gateway и service mesh решений. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходные 8 открытых вопросов сохранены ниже. Добавленный блок только уточняет,
+какие управленческие решения зависят от ответов.
+
+</details>
+
 1. **Заказчик-ES.** Какая версия ES (7.x vs 8.x) развёрнута у заказчика? RRF-нативный есть только в 8.8+. Если 7.x — нужно либо обновлять, либо ручной RRF через `function_score`.
 2. **GPU-бюджет.** Готов ли заказчик к 🟡 Оптимальному ($300–800/мес) на Sprint 6, или начинаем с 🟢 Бюджетного?
 3. **Multi-tenancy.** Один пилотный заказчик или планируется multi-tenant с самого начала? От ответа зависит, нужны ли ES namespaces и Audit DB tenant_id с первой недели.
@@ -803,6 +1000,25 @@ experiments/bl60_architecture_poc/
 
 ## 14. DoD checklist (issue #214)
 
+### 🧠 Пояснение для БА
+> DoD checklist показывает, как ревьюер понимает, что исследование действительно закрыто. Для бизнеса это прозрачный контракт качества: не «документ написан», а «есть матрицы, схема, PoC, API contracts, риски, changelog и понятные места проверки». Техническая деталь: для BL-60-ru добавлена отдельная проверка educational blocks, link dates и docs index link, чтобы адаптация не деградировала при будущих правках.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [CommonMark Specification](https://spec.commonmark.org/) | EN | rolling spec; проверено 2026-05-21 | Базовый reference для переносимого Markdown. |
+| [GitHub Docs: Basic writing and formatting syntax](https://docs.github.com/en/get-started/writing-on-github) | EN | rolling docs; проверено 2026-05-21 | Как GitHub рендерит tables, links, details и task lists. |
+| [Keep a Changelog на русском](https://keepachangelog.com/ru/1.1.0/) | RU | спецификация 1.1.0; проверено 2026-05-21 | Контекст для changelog-entry в `## [Unreleased]`. |
+| [Семантическое Версионирование на русском](https://semver.org/lang/ru/) | RU | SemVer 2.0.0; проверено 2026-05-21 | Почему версия документа должна совпадать с изменениями и scope. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходная DoD table issue #214 сохранена ниже. BL-60-ru не переписывает этот
+чек-лист, а добавляет образовательный слой и отдельный changelog marker.
+
+</details>
+
 | DoD item (исходный текст) | Status | Где |
 |---------------------------|:------:|-----|
 | Опубликован отчёт `docs/research/2026-05-XX_bl-60_next-gen-architecture_v1.md` со всеми разделами | ✅ | этот файл |
@@ -814,9 +1030,40 @@ experiments/bl60_architecture_poc/
 | Отчёт ревьюирован PO, Tech Lead и Infra-инженером | ⏳ | ожидает ревью PR #215 |
 | `CHANGELOG.md` обновлён маркером `RESEARCH: BL-60 next-gen RAG architecture, LLM routing & infra tiers` | ✅ | строка добавлена в `## [Unreleased] / ### Documentation` (см. [CHANGELOG.md](../../CHANGELOG.md)) |
 
+### 14.1. BL-60-ru adaptation checklist (issue #218)
+
+| DoD item | Status | Где |
+|----------|:------:|-----|
+| Разделы 4–15 адаптированы на русском с сохранением исходной структуры | ✅ | §4–§15, добавлены `🧠` / `📚` блоки перед исходным техническим текстом |
+| Для ключевых технических понятий добавлены объяснения для BA/PO | ✅ | `### 🧠 Пояснение для БА` в каждом разделе §4–§15 |
+| Каждый раздел имеет 2–5 аннотированных источников, минимум RU + EN | ✅ | `### 📚 Что почитать`, ссылки проверены на 2026-05-21 |
+| Backward compatibility исходного технического текста сохранена | ✅ | `details`-заметки в каждом разделе §4–§15, исходные таблицы/схемы/контракты не удалялись |
+| `CHANGELOG.md` содержит marker `DOCS: BL-60-ru — Russian adaptation with educational annotations for non-technical stakeholders` | ✅ | [`CHANGELOG.md`](../../CHANGELOG.md) |
+| `docs/README.md` содержит ссылку на BL-60-ru adaptation | ✅ | [`docs/README.md`](../README.md) |
+| Добавлен regression-тест структуры адаптации | ✅ | [`tests/test_bl60_ru_adaptation_docs.py`](../../tests/test_bl60_ru_adaptation_docs.py) |
+
 ---
 
 ## 15. Acceptance / Next steps
+
+### 🧠 Пояснение для БА
+> Acceptance фиксирует, что происходит после ревью: какие ADR и BL-задачи должны появиться, что входит в Sprint 6 и где требуется PO/Tech Lead/Infra решение. Для бизнеса это перевод research в управляемый backlog, чтобы архитектурное исследование не осталось статичным документом. Техническая деталь: следующий шаг — ADR-010 и отдельные задачи BL-61..BL-66 с feature flags, smoke checks и rollback paths.
+
+### 📚 Что почитать
+| Источник | Язык | Дата / проверка | Что даст |
+|----------|------|-----------------|----------|
+| [GitHub Docs: About issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/about-issues) | EN | rolling docs; проверено 2026-05-21 | Как превращать research findings в отслеживаемые задачи. |
+| [GitHub Docs: About pull requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) | EN | rolling docs; проверено 2026-05-21 | Как фиксировать review, acceptance и scope через PR workflow. |
+| [Разбираемся в проектировании микросервисов](https://habr.com/ru/companies/reksoft/articles/864206/) | RU | опубл. 2024-12-05; проверено 2026-05-21 | Помогает разложить дальнейшие BL-задачи по границам сервисов. |
+| [Основные паттерны микросервисной архитектуры](https://habr.com/ru/articles/904954/) | RU | опубл. 2025-04-27; проверено 2026-05-21 | Контекст для staged migration вместо одномоментного cutover. |
+
+<details>
+<summary>Backward compat для технических ревьюеров</summary>
+
+Исходные next steps сохранены ниже. Добавленный блок поясняет, как использовать
+их как backlog handoff после acceptance.
+
+</details>
 
 После `Accepted` PO/Tech Lead/Infra:
 
