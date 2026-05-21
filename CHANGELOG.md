@@ -7,6 +7,19 @@
 ## [Unreleased]
 
 ### Documentation
+- **DOCS: BL-67 RU-education layer for BL-61 market research.**
+  Добавлен отдельный BA/PO-facing артефакт
+  [`docs/research/2026-05-21_bl-61_market-research_ru-education_v1.md`](docs/research/2026-05-21_bl-61_market-research_ru-education_v1.md)
+  без изменения исходного BL-61 research. Разделы 4–20 сохраняют технические
+  названия компонентов (`Elasticsearch`, `NATS JetStream`, `vLLM`,
+  `bge-reranker-large` и др.), но дополнены русскоязычными блоками
+  `💡 Для БА: что это значит для проекта?` и `📚 Читать далее` с внешними
+  источниками для самостоятельного углубления. Добавлен regression-тест
+  [`tests/test_research_education.py`](tests/test_research_education.py),
+  который проверяет, что исходный файл BL-61 не содержит education-блоков,
+  новая RU-адаптация покрывает разделы 4–20, а docs index / backlog /
+  changelog синхронизированы.
+
 - **DOCS: BL-60-ru — Russian adaptation with educational annotations for non-technical stakeholders.**
   Разделы 4–15 BL-60 research
   [`docs/research/2026-05-20_bl-60_next-gen-architecture_v1.md`](docs/research/2026-05-20_bl-60_next-gen-architecture_v1.md)
