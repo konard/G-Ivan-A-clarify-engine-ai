@@ -1,0 +1,4318 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research: RU-education adaptation for BL-61 Market Comparison (BL-67)</title>
+  <style>
+html {
+  box-sizing: border-box;
+}
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 12px;
+  width: 100vw;
+  max-width: none;
+  overflow-x: hidden;
+}
+main {
+  width: 100vw;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin: 8px 0 16px;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+  min-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+th {
+  background: #f5f5f5;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+pre {
+  overflow-x: auto;
+  padding: 12px;
+  background: #f6f8fa;
+}
+code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+blockquote {
+  border-left: 4px solid #d0d7de;
+  margin-left: 0;
+  padding-left: 12px;
+  color: #57606a;
+}
+a {
+  color: #0969da;
+}
+@media (prefers-color-scheme: dark) {
+  body { background: #1e1e1e; color: #e0e0e0; }
+  th { background: #2d2d2d; }
+  td, th { border-color: #444; }
+  pre { background: #2d2d2d; }
+  blockquote { border-left-color: #444; color: #b7b7b7; }
+  a { color: #7db7ff; }
+}
+  </style>
+</head>
+<body>
+<main>
+<h1 id="research-ru-education-adaptation-for-bl-61-market-comparison-bl-67">Research: RU-education adaptation for BL-61 Market Comparison (BL-67)</h1>
+<h2 id="метаданные">Метаданные</h2>
+<ul>
+<li><strong>Дата:</strong> 2026-05-21</li>
+<li><strong>Версия:</strong> v1</li>
+<li><strong>Тип документа:</strong> <code>research_adaptation</code></li>
+<li><strong>Статус:</strong> Draft -&gt; готов к ревью BA / PO / Tech Lead / Infra</li>
+<li><strong>Автор:</strong> konard (AI issue solver, по <a href="https://github.com/G-Ivan-A/clarify-engine-ai/issues/220">issue #220</a>)</li>
+<li><strong>Спринт:</strong> Sprint 6 - Architecture Foundation</li>
+<li><strong>PR:</strong> <a href="https://github.com/G-Ivan-A/clarify-engine-ai/pull/221"><code>#221</code></a></li>
+<li><strong>Исходный артефакт:</strong> <a href="2026-05-21_bl-61_market-research_v1.md"><code>docs/research/2026-05-21_bl-61_market-research_v1.md</code></a></li>
+<li><strong>Depends on:</strong> BL-61 (Market Research for Microservices Architecture Components)</li>
+<li><strong>Целевая аудитория:</strong> Business Analyst, Product Owner, Tech Lead, Infra Lead, ML-инженер, BA Lead</li>
+<li><strong>Связанные документы:</strong></li>
+<li><a href="2026-05-20_bl-60_next-gen-architecture_v1.md"><code>docs/research/2026-05-20_bl-60_next-gen-architecture_v1.md</code></a></li>
+<li><a href="../CONCEPT.md"><code>docs/CONCEPT.md</code></a></li>
+<li><a href="../ADR/001-rag-architecture.md"><code>docs/ADR/001-rag-architecture.md</code></a></li>
+<li><a href="../ADR/005-audit-trail.md"><code>docs/ADR/005-audit-trail.md</code></a></li>
+<li><a href="2026-05-21_bl-57_retrieval-architecture_v1.md"><code>docs/research/2026-05-21_bl-57_retrieval-architecture_v1.md</code></a></li>
+<li><a href="2026-05-20_bl-59_requirement-parsing_v1.md"><code>docs/research/2026-05-20_bl-59_requirement-parsing_v1.md</code></a></li>
+</ul>
+<blockquote><strong>Scope note.</strong> Это образовательная RU-адаптация BL-61, не реализация.</blockquote>
+<blockquote>Исходный файл BL-61 не изменяется. Документ не меняет <code>src/</code>, <code>configs/</code>,</blockquote>
+<blockquote><code>prompts/</code> и не фиксирует необратимый vendor lock-in. Цель BL-67 - дать BA /</blockquote>
+<blockquote>PO понятное объяснение, зачем нужны компоненты микросервисной AI/RAG</blockquote>
+<blockquote>архитектуры, какие бизнес-риски они закрывают и куда можно углубиться через</blockquote>
+<blockquote>внешние источники.</blockquote>
+<hr>
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<p>BL-60 предложил целевую микросервисную архитектуру, но намеренно зафиксировал несколько конкретных технологий как рабочие кандидаты: Elasticsearch для production search, NATS / RabbitMQ для очередей, Ollama / vLLM для local serving, PostgreSQL для audit. Issue #216 уточняет риск: у заказчика может не быть доступа к Elasticsearch, GPU, облаку, нужным серверам или согласованным SaaS-провайдерам. Поэтому BL-61 сравнивает не один стек, а рынок альтернатив по каждому компоненту.</p>
+<p>Основной вывод: архитектуру нужно проектировать через <strong>заменяемые контракты</strong>, а не через конкретные продукты. Для Sprint 6 стоит выбрать продукты, которые имеют self-hosted путь, умеренную эксплуатационную сложность и понятную миграцию:</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Компонент</th>
+<th>Budget option</th>
+<th>Optimal option для pilot / early production</th>
+<th>Enterprise option</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Vector DB / Search</td>
+<td>pgvector или ChromaDB</td>
+<td>Qdrant или OpenSearch</td>
+<td>Elasticsearch / Vespa / managed vector SaaS</td>
+</tr>
+<tr>
+<td>Message bus</td>
+<td>RabbitMQ или Redis Streams</td>
+<td>NATS JetStream</td>
+<td>Kafka / Pulsar / managed cloud bus</td>
+</tr>
+<tr>
+<td>LLM orchestration</td>
+<td>LiteLLM + Instructor + prompt files</td>
+<td>LlamaIndex или Haystack + LangGraph для flows</td>
+<td>LangSmith / Portkey / Braintrust governance</td>
+</tr>
+<tr>
+<td>Document parsing</td>
+<td>PyMuPDF + pdfplumber + python-docx/openpyxl</td>
+<td>Docling + Unstructured</td>
+<td>Azure Document Intelligence / Textract / Document AI</td>
+</tr>
+<tr>
+<td>Embeddings</td>
+<td>BAAI/bge-m3 self-hosted</td>
+<td>bge-m3 + multilingual-e5 / Jina fallback</td>
+<td>OpenAI / Cohere / Voyage / RU provider API</td>
+</tr>
+<tr>
+<td>Local LLM serving</td>
+<td>Ollama или llama.cpp</td>
+<td>vLLM или TGI</td>
+<td>TensorRT-LLM / KServe / BentoML</td>
+</tr>
+<tr>
+<td>Reranker</td>
+<td>FlashRank / MiniLM</td>
+<td>bge-reranker-base/large</td>
+<td>Cohere / Jina / Voyage / ColBERT</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>Prometheus + Grafana + Loki</td>
+<td>OpenTelemetry + Grafana stack + Sentry</td>
+<td>Datadog / New Relic / Dynatrace / Honeycomb</td>
+</tr>
+<tr>
+<td>Audit DB</td>
+<td>PostgreSQL append-only</td>
+<td>ClickHouse + PostgreSQL metadata</td>
+<td>ClickHouse Cloud / BigQuery / Snowflake</td>
+</tr>
+<tr>
+<td>Object storage</td>
+<td>local FS / MinIO single node</td>
+<td>MinIO HA / Yandex / Selectel</td>
+<td>S3 / Azure Blob / GCS / Ceph</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>in-process + Redis OSS</td>
+<td>Redis / Dragonfly / KeyDB</td>
+<td>Redis Cloud / Hazelcast / Aerospike</td>
+</tr>
+<tr>
+<td>API gateway</td>
+<td>FastAPI + NGINX</td>
+<td>Kong / APISIX / Envoy</td>
+<td>Kong Enterprise / Tyk / AWS API Gateway / Cloudflare</td>
+</tr>
+<tr>
+<td>PII masking</td>
+<td>custom regex + tests</td>
+<td>Microsoft Presidio + RU recognizers</td>
+<td>Google DLP / Azure / AWS / Nightfall / Immuta</td>
+</tr>
+</tbody></table></div>
+<p><strong>Recommended default architecture for Sprint 6 PoC:</strong></p>
+<p>1. Keep the current monolith contracts, but introduce provider interfaces: <code>SearchBackend</code>, <code>MessageBus</code>, <code>EmbeddingProvider</code>, <code>ObjectStore</code>, <code>AuditStore</code>. 2. Start with self-hosted, RU-resident defaults: Qdrant or OpenSearch, NATS JetStream, Docling/Unstructured, bge-m3, Ollama/vLLM, PostgreSQL + ClickHouse, MinIO, Redis, FastAPI + NGINX, Presidio. 3. Keep managed/SaaS alternatives only behind compliance flags and budget approvals: OpenAI/Cohere/Voyage, Pinecone, cloud object storage, Datadog/New Relic, Google/AWS/Azure DLP. 4. Treat Elasticsearch as a strong enterprise candidate, not an assumption. If corporate ES is available and licensed, it is still a good production choice because it covers BM25, dense vectors, filtering, security, backups, and ops maturity in one platform.</p>
+<hr>
+<h2 id="2-методология-и-ограничения">2. Методология и ограничения</h2>
+<h3 id="21-источники-и-дата-проверки">2.1. Источники и дата проверки</h3>
+<p>Прайсы и capability-описания проверены по публичным официальным страницам и документации на дату <strong>2026-05-21</strong>. В конце документа есть Source Register с URL. Для продуктов с quote-only моделью указано <code>Quote</code>, потому что публичного стабильного self-serve прайса нет или цена зависит от региона, volume commit, support tier и private networking.</p>
+<h3 id="22-нормализация-стоимости">2.2. Нормализация стоимости</h3>
+<p>В таблицах используются четыре вида стоимости:</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Маркер</th>
+<th>Что означает</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>$0 license</code></td>
+<td>Open-source / self-hosted без лицензии, но есть infra + ops cost.</td>
+</tr>
+<tr>
+<td><code>Infra estimate</code></td>
+<td>Оценка месячного TCO для типового pilot: 4-16 vCPU, 16-64 GB RAM, 100-500 GB SSD, без 24/7 DevOps. Это не vendor price.</td>
+</tr>
+<tr>
+<td><code>Usage-based</code></td>
+<td>Официальный SaaS/managed прайс по операциям, токенам, GB-month, request units, compute units.</td>
+</tr>
+<tr>
+<td><code>Quote</code></td>
+<td>Публичная цена не раскрыта, нужен sales quote.</td>
+</tr>
+</tbody></table></div>
+<p>Все суммы в USD без НДС, egress, marketplace markup, enterprise support и скидок commit, если не указано иначе. Для RU-провайдеров и локальных DC цена зависит от договора, поэтому дана применимость, а не точный ruble-rate.</p>
+<h3 id="23-типовой-workload-для-сравнения">2.3. Типовой workload для сравнения</h3>
+<p>Чтобы сравнение не было абстрактным, принят pilot-profile:</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Параметр</th>
+<th>Значение</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Corpus</td>
+<td>10k-200k chunks, 768-1024 dim embeddings, 20-200 GB raw docs</td>
+</tr>
+<tr>
+<td>Search traffic</td>
+<td>1-10 RPS interactive, batch indexing nightly</td>
+</tr>
+<tr>
+<td>LLM traffic</td>
+<td>100-2,000 RAG calls/day, PII-sensitive share 30-60%</td>
+</tr>
+<tr>
+<td>Availability</td>
+<td>Pilot 99.0-99.5%, production target 99.9%</td>
+</tr>
+<tr>
+<td>Compliance</td>
+<td>RU-residency preferred, external SaaS only after approval</td>
+</tr>
+<tr>
+<td>Team</td>
+<td>1-2 backend engineers, part-time DevOps, no dedicated SRE initially</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2 id="3-cross-component-decision-rules">3. Cross-Component Decision Rules</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Rule</th>
+<th>Decision impact</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><strong>Prefer self-hosted for PII path.</strong></td>
+<td>Search, embeddings, LLM serving, PII masking and audit should have a local option.</td>
+</tr>
+<tr>
+<td><strong>Separate API contracts from products.</strong></td>
+<td>Product choice must be swappable without changing <code>Pipeline</code>, UI, or export contracts.</td>
+</tr>
+<tr>
+<td><strong>Use managed only for clear TCO win.</strong></td>
+<td>SaaS is justified for bursty workloads, missing infra skills, or strong support needs.</td>
+</tr>
+<tr>
+<td><strong>Avoid AGPL surprise.</strong></td>
+<td>AGPL components are acceptable only if legal confirms distribution/SaaS obligations.</td>
+</tr>
+<tr>
+<td><strong>Keep ChromaDB and in-memory fallbacks.</strong></td>
+<td>They remain useful for tests and offline demos, even if not production-grade.</td>
+</tr>
+<tr>
+<td><strong>Price by steady-state and migration.</strong></td>
+<td>Cheapest pilot tool can become expensive if migration requires re-embedding or reindexing.</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2 id="4-компонент-1-vector-database-search-engine">4. Компонент 1 - Vector Database / Search Engine</h2>
+<p><strong>Ответственность:</strong> хранение embeddings, лексический поиск, hybrid search, metadata filtering, incremental updates и production retrieval.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>Metadata filtering / Hybrid / Updates / Scale / Support</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Elasticsearch 8.x</td>
+<td>BM25, dense vectors, hybrid RRF, filters, security</td>
+<td>Elastic License / SSPL options, tuning complexity, JVM ops</td>
+<td>Mature enterprise search, rich query DSL, snapshots, RBAC</td>
+<td>Self-managed <code>$0 basic</code> + infra; Elastic Cloud usage/resource pricing</td>
+<td>Pilot 4-8 vCPU, 16-32 GB RAM, SSD; production 3+ nodes</td>
+<td>M/H, needs ES skills</td>
+<td>Elastic License v2 / SSPL / AGPL options by distribution/version</td>
+<td>Yes self-host; managed cloud may violate residency</td>
+<td>Strong filters, strong hybrid, bulk updates, high scale, enterprise support</td>
+</tr>
+<tr>
+<td>2</td>
+<td>OpenSearch 2.x/3.x</td>
+<td>ES-like search + kNN + BM25</td>
+<td>Fork compatibility gaps, plugin/version drift</td>
+<td>Apache 2.0, AWS-managed path, familiar Lucene model</td>
+<td><code>$0 license</code>; AWS examples: c6g.large.search <code>$0.113/h</code>, semantic OCU <code>$0.24/h</code></td>
+<td>3 nodes recommended for HA, 8-64 GB RAM/node</td>
+<td>M/H</td>
+<td>Apache 2.0</td>
+<td>Yes self-host; AWS region residency depends on approval</td>
+<td>Strong filters, strong hybrid with custom query, bulk updates, high support</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Qdrant 1.x</td>
+<td>Vector DB with payload filters and hybrid sparse+dense</td>
+<td>BM25 less native than Lucene, separate lexical stack may be needed</td>
+<td>Simple ops, Rust performance, good payload filtering, cloud/free tier</td>
+<td>OSS <code>$0</code>; Qdrant Cloud free 0.5 vCPU/1 GB/4 GB, paid usage-based</td>
+<td>Pilot 2-4 vCPU, 8-16 GB RAM; HA 3 nodes</td>
+<td>S/M</td>
+<td>Apache 2.0</td>
+<td>Yes self-host/hybrid cloud</td>
+<td>Strong filters, good hybrid, upsert, medium-high scale, active community</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Weaviate</td>
+<td>Vector DB, hybrid search, modules</td>
+<td>Higher memory footprint, GraphQL/schema learning</td>
+<td>Built-in hybrid, multi-tenancy, modules</td>
+<td>OSS <code>$0</code>; Weaviate Cloud serverless/enterprise usage or quote</td>
+<td>4-8 vCPU, 16-32 GB RAM pilot</td>
+<td>M</td>
+<td>BSD-3-Clause core</td>
+<td>Yes self-host; WCD depends region</td>
+<td>Good filters, native hybrid, batch updates, high support</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Milvus</td>
+<td>High-scale vector DB</td>
+<td>Operationally heavy (etcd, object store, query/data nodes)</td>
+<td>Very high scale, GPU/index options, Zilliz Cloud</td>
+<td>OSS <code>$0</code>; Zilliz Cloud usage/quote</td>
+<td>Pilot complex; production 3+ services, object store</td>
+<td>H</td>
+<td>Apache 2.0</td>
+<td>Yes self-host</td>
+<td>Good filters, hybrid improving, batch updates, very high scale</td>
+</tr>
+<tr>
+<td>6</td>
+<td>pgvector</td>
+<td>Vectors inside PostgreSQL</td>
+<td>Recall/latency limits at high cardinality, DB bloat</td>
+<td>Reuses Postgres, transactional metadata, simplest governance</td>
+<td><code>$0 license</code>; Postgres infra already likely needed</td>
+<td>4-16 vCPU, 16-64 GB RAM, SSD</td>
+<td>S/M</td>
+<td>PostgreSQL License</td>
+<td>Yes self-host</td>
+<td>Excellent relational filters, BM25 requires extension/sidecar, easy updates, medium scale</td>
+</tr>
+<tr>
+<td>7</td>
+<td>ChromaDB</td>
+<td>Local/dev vector store</td>
+<td>Not ideal for HA, limited enterprise governance</td>
+<td>Simple tests/offline, current ecosystem familiarity</td>
+<td><code>$0 license</code>; infra only</td>
+<td>2-4 vCPU, 8-16 GB RAM for small pilot</td>
+<td>XS/S</td>
+<td>Apache 2.0</td>
+<td>Yes local</td>
+<td>Basic filters, hybrid mostly app-side, simple updates, low-medium scale</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Pinecone</td>
+<td>Managed vector DB and inference</td>
+<td>SaaS/data residency, usage surprises, vendor lock-in</td>
+<td>Low ops, serverless, read/write/storage unit model, DRN</td>
+<td>Free/start credits; paid plan has <code>$50</code> monthly minimum, WU examples <code>$4-$6.75/M</code> by tier/region</td>
+<td>No local infra</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>No self-host; residency by cloud region only</td>
+<td>Good metadata, sparse+dense/full-text options, managed scale/support</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Vespa</td>
+<td>Search + vector + ranking platform</td>
+<td>Steep learning curve, ops complexity</td>
+<td>Powerful ranking, hybrid, large-scale serving</td>
+<td>OSS <code>$0</code>; Vespa Cloud usage/quote</td>
+<td>3+ nodes recommended, 16-64 GB RAM/node</td>
+<td>H</td>
+<td>Apache 2.0</td>
+<td>Yes self-host</td>
+<td>Strong filters/hybrid/ranking, streaming updates, very high scale</td>
+</tr>
+<tr>
+<td>10</td>
+<td>LanceDB</td>
+<td>Embedded/table vector storage</td>
+<td>Young ecosystem for HA/ops, search feature depth</td>
+<td>Cheap local/lakehouse path, Arrow/Lance format</td>
+<td>OSS <code>$0</code>; LanceDB Cloud usage/quote</td>
+<td>2-8 vCPU, object store optional</td>
+<td>S/M</td>
+<td>Apache 2.0</td>
+<td>Yes self-host</td>
+<td>Basic-good filters, hybrid available, easy batch, medium scale</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Redis Stack Vector</td>
+<td>Cache + vector similarity</td>
+<td>RAM cost, persistence/search limits vs search engines</td>
+<td>Low latency, reuses Redis, good for cache/RAG hotset</td>
+<td>Redis OSS/RSAL mix; Redis Cloud usage</td>
+<td>RAM-heavy: dataset must fit memory</td>
+<td>S/M</td>
+<td>Redis source licenses vary; modules not pure OSS in all editions</td>
+<td>Yes self-host if license approved</td>
+<td>Good filters, hybrid limited, fast updates, medium scale</td>
+</tr>
+<tr>
+<td>12</td>
+<td>MongoDB Atlas Vector Search</td>
+<td>Document DB + vector search</td>
+<td>SaaS lock-in, self-host vector search limitations</td>
+<td>If MongoDB already exists, simple metadata model</td>
+<td>Atlas cluster usage-based</td>
+<td>Managed infra</td>
+<td>S/M</td>
+<td>Commercial / SSPL server</td>
+<td>Atlas region residency only</td>
+<td>Good document filters, vector + text search, managed scale</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Azure AI Search</td>
+<td>Managed hybrid search and vector</td>
+<td>Azure lock-in, data residency approval, cost</td>
+<td>Mature managed search, semantic ranking, RBAC</td>
+<td>Usage by SKU/replicas/partitions</td>
+<td>Managed infra</td>
+<td>S/M</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent, not local</td>
+<td>Strong filters/hybrid, managed updates, enterprise support</td>
+</tr>
+<tr>
+<td>14</td>
+<td>DataStax Astra DB</td>
+<td>Cassandra + vector</td>
+<td>SaaS lock-in, less lexical search depth</td>
+<td>Serverless vector on Cassandra, scalable writes</td>
+<td>Serverless usage/quote</td>
+<td>Managed infra</td>
+<td>S/M</td>
+<td>Commercial SaaS / Apache Cassandra core</td>
+<td>Region-dependent</td>
+<td>Good metadata, vector search, high write scale</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>pgvector or ChromaDB</td>
+<td><code>$1k-6k</code> infra + part-time ops</td>
+<td>MVP/offline pilot, &lt;50k chunks, minimum new infra</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>Qdrant or OpenSearch</td>
+<td><code>$4k-20k</code> infra/managed + ops</td>
+<td>Production pilot where ES access is uncertain</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>Elasticsearch or Vespa</td>
+<td><code>$20k-100k+</code> infra/license/support</td>
+<td>Corporate search platform, high query volume, strict security/backup needs</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>ChromaDB -&gt; Qdrant/OpenSearch/ES</td>
+<td>Export chunks + metadata, reuse embeddings if dim/model unchanged, bulk upsert</td>
+<td>Low with dual-write</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>pgvector -&gt; ES/OpenSearch</td>
+<td>Dump rows, map metadata fields, bulk index, preserve <code>chunk_id</code></td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Qdrant -&gt; ES/OpenSearch</td>
+<td>Export collection payload/vector, add lexical analyzer, re-run quality eval</td>
+<td>Low-medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>ES/OpenSearch -&gt; Qdrant</td>
+<td>Export <code>_source</code>, keep embeddings, move BM25 to sidecar or sparse vectors</td>
+<td>Medium</td>
+<td>Medium-high</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Vector Database / Search Engine — это &quot;память с поиском&quot; для всех фрагментов Корпуса требований: она быстро находит релевантные chunks по словам, смыслу и metadata вроде продукта, раздела или страницы.</li>
+<li>Для проекта это важно, потому что качество ответа LLM зависит не только от модели, но и от того, какие доказательства попали в prompt. Слабый search layer даёт ложные <code>STRICT_MODE -&gt; НД</code>, а слишком сложный search layer повышает DevOps-cost.</li>
+<li>Технически: <code>Elasticsearch</code>, <code>OpenSearch</code>, <code>Qdrant</code>, <code>pgvector</code> и <code>ChromaDB</code> должны быть спрятаны за контрактом <code>SearchBackend</code>, чтобы можно было начать с дешёвого варианта и перейти на enterprise search без переписывания <code>Pipeline</code>.</li>
+<li>Когда выбирать: <code>pgvector</code>/<code>ChromaDB</code> подходят для MVP и offline demo; <code>Qdrant</code>/<code>OpenSearch</code> — для production pilot без гарантированного доступа к corporate Elasticsearch; <code>Elasticsearch</code>/<code>Vespa</code> — когда уже есть enterprise-инфраструктура, RBAC, backups и search-команда.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/dense-vector.html">Elasticsearch dense vector field</a> — официальная документация по vector search и HNSW, EN.</li>
+<li><a href="https://qdrant.tech/documentation/concepts/hybrid-queries/">Qdrant hybrid queries</a> — как совмещать dense и sparse retrieval, EN.</li>
+<li><a href="https://github.com/pgvector/pgvector">pgvector README</a> — базовый путь для хранения embeddings в PostgreSQL, EN.</li>
+</ul>
+<hr>
+<h2 id="5-компонент-2-message-bus-event-streaming">5. Компонент 2 - Message Bus / Event Streaming</h2>
+<p><strong>Ответственность:</strong> асинхронная коммуникация сервисов, ingestion jobs, backpressure, retries и delivery guarantees.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>Latency / Throughput / Persistence / Delivery / DLQ / Routing / Cluster</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>NATS JetStream</td>
+<td>Lightweight messaging + persistent streams</td>
+<td>Smaller enterprise bench than Kafka, stream retention tuning</td>
+<td>Very low latency, simple ops, request/reply, KV/object store</td>
+<td>OSS <code>$0</code>; Synadia Cloud quote/usage</td>
+<td>2-4 vCPU/node, 4-16 GB RAM, 3 nodes HA</td>
+<td>S/M</td>
+<td>Apache 2.0</td>
+<td>Yes self-host</td>
+<td>p95 low ms, high throughput, file persistence, at-least-once, DLQ by consumer, subjects</td>
+</tr>
+<tr>
+<td>2</td>
+<td>RabbitMQ</td>
+<td>AMQP queues, routing, worker jobs</td>
+<td>Throughput lower than Kafka, quorum queue tuning</td>
+<td>Mature, simple DLQ/routing, great for task queues</td>
+<td>OSS <code>$0</code>; CloudAMQP free/paid tiers</td>
+<td>2-8 vCPU, 4-32 GB RAM, 3 nodes HA</td>
+<td>S/M</td>
+<td>MPL 2.0</td>
+<td>Yes self-host</td>
+<td>Low ms, medium throughput, durable queues, at-least-once, DLQ native, exchanges</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Apache Kafka</td>
+<td>Durable event streaming</td>
+<td>High ops complexity, partition/rebalance pain</td>
+<td>Standard for high throughput streams, replay, ecosystem</td>
+<td>OSS <code>$0</code>; Confluent Cloud eCKU/CKU/storage/network</td>
+<td>3+ brokers, 16-64 GB RAM/node, SSD</td>
+<td>H</td>
+<td>Apache 2.0</td>
+<td>Yes self-host</td>
+<td>Low-medium latency, very high throughput, log persistence, at-least/exactly-once producer semantics</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Apache Pulsar</td>
+<td>Multi-tenant streaming + queueing</td>
+<td>More components (BookKeeper/ZK/metadata), smaller talent pool</td>
+<td>Tiered storage, geo-replication, queue/stream unification</td>
+<td>OSS <code>$0</code>; StreamNative quote</td>
+<td>Brokers + BookKeeper, 3+ nodes</td>
+<td>H</td>
+<td>Apache 2.0</td>
+<td>Yes self-host</td>
+<td>Low latency, high throughput, durable ledger, strong multi-tenancy</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Redis Streams</td>
+<td>Lightweight persistent streams</td>
+<td>Memory pressure, limited replay governance</td>
+<td>Simple if Redis exists, consumer groups</td>
+<td>OSS/Redis licensing varies; infra only</td>
+<td>RAM-heavy, 1-3 nodes</td>
+<td>S</td>
+<td>BSD/RSAL variants by package</td>
+<td>Yes self-host if license approved</td>
+<td>Low latency, medium throughput, in-memory + AOF/RDB, at-least-once</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Amazon SQS/SNS</td>
+<td>Managed queues/topics</td>
+<td>External cloud, no local residency, limited ordering unless FIFO</td>
+<td>No ops, mature DLQ, cheap per request</td>
+<td>SQS: 1M requests/month free, Standard <code>$0.40/M</code>, FIFO <code>$0.50/M</code>; SNS publish <code>$0.50/M</code></td>
+<td>Managed</td>
+<td>XS/S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent, not local</td>
+<td>Medium latency, high scale, durable, at-least-once, DLQ native</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Google Pub/Sub</td>
+<td>Managed pub/sub streaming</td>
+<td>External cloud, egress, ordering constraints</td>
+<td>Global managed scale, push/pull, BigQuery integration</td>
+<td>First 10 GiB/month basic delivery free; then <code>$40/TiB</code>; import topics <code>$80/TiB</code>; storage <code>$0.27/GiB-month</code></td>
+<td>Managed</td>
+<td>XS/S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Medium latency, very high scale, durable, at-least-once/exactly-once options</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Azure Service Bus</td>
+<td>Enterprise managed queues/topics</td>
+<td>Azure lock-in, throughput by tier</td>
+<td>Sessions, DLQ, topics, enterprise support</td>
+<td>Basic/Standard/Premium; Standard includes first 13M ops/month; Premium bills Messaging Units/hour; geo-replication <code>$0.09-$0.23/GB</code></td>
+<td>Managed</td>
+<td>XS/S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Medium latency, high reliability, DLQ native, filters/topics</td>
+</tr>
+<tr>
+<td>9</td>
+<td>ZeroMQ</td>
+<td>Embedded messaging library</td>
+<td>No broker persistence, app owns reliability</td>
+<td>Very fast, minimal dependency, good for internal IPC</td>
+<td><code>$0 license</code></td>
+<td>App-local</td>
+<td>M</td>
+<td>MPL 2.0</td>
+<td>Yes</td>
+<td>Very low latency, no built-in persistence/DLQ</td>
+</tr>
+<tr>
+<td>10</td>
+<td>NSQ</td>
+<td>Simple distributed queue</td>
+<td>Smaller ecosystem, fewer enterprise features</td>
+<td>Easy ops, decentralized topology</td>
+<td><code>$0 license</code></td>
+<td>2-4 vCPU nodes</td>
+<td>S/M</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>Low latency, medium throughput, at-least-once, simple routing</td>
+</tr>
+<tr>
+<td>11</td>
+<td>ActiveMQ Artemis</td>
+<td>JMS/AMQP/MQTT/STOMP broker</td>
+<td>Java ops, less cloud-native mindshare</td>
+<td>Protocol rich, mature enterprise messaging</td>
+<td><code>$0 license</code></td>
+<td>2-8 vCPU, 8-32 GB RAM</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>Low-medium latency, durable, DLQ, JMS semantics</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Solace PubSub+</td>
+<td>Enterprise event broker</td>
+<td>Commercial quote, lock-in</td>
+<td>Strong enterprise routing, appliances, support</td>
+<td>Quote / free developer tier</td>
+<td>Managed/appliance/self-managed</td>
+<td>M/H</td>
+<td>Commercial</td>
+<td>Possible self-host/private cloud</td>
+<td>Low latency, high throughput, strong routing/governance</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>RabbitMQ or Redis Streams</td>
+<td><code>$1k-8k</code></td>
+<td>Worker queues, small pilot, known AMQP patterns</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>NATS JetStream</td>
+<td><code>$2k-15k</code></td>
+<td>Microservices split with simple ops and low latency</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>Kafka or Pulsar</td>
+<td><code>$25k-150k+</code></td>
+<td>Event sourcing, high-volume replay, enterprise data streaming</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>RabbitMQ -&gt; NATS</td>
+<td>Introduce bus abstraction, dual-publish ingestion events, drain queues</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>NATS -&gt; Kafka</td>
+<td>Map subjects to topics, define partitions/keys, run dual-write, replay from object/audit store</td>
+<td>Medium</td>
+<td>Medium-high</td>
+</tr>
+<tr>
+<td>Redis Streams -&gt; RabbitMQ/NATS</td>
+<td>Consumer group offset export is custom; replay from durable source preferred</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Cloud bus -&gt; self-host</td>
+<td>Wrap SDK calls behind interface, replay dead-letter/archive events</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Message Bus — это &quot;очередь задач&quot; между сервисами: UI может принять документ, ingestion worker спокойно разобрать его, indexing worker построить embeddings, а generation service не будет ждать всё синхронно.</li>
+<li>Для проекта это важно, потому что пилот с несколькими БА быстро упирается в долгие операции: parsing, indexing, rerank, LLM calls. Очередь снижает риск зависаний UI и даёт понятные retries / DLQ, когда документ или провайдер временно падает.</li>
+<li>Технически: <code>NATS JetStream</code>, <code>RabbitMQ</code>, <code>Kafka</code> или cloud bus должны быть закрыты adapter-интерфейсом, а события должны иметь стабильные поля <code>run_id</code>, <code>document_id</code>, <code>event_type</code>, <code>payload_version</code>.</li>
+<li>Когда выбирать: <code>RabbitMQ</code> проще для worker queues; <code>NATS JetStream</code> хорошо подходит для microservices pilot с низкой latency; <code>Kafka</code>/<code>Pulsar</code> нужны, если бизнес хочет replay, event sourcing и большую потоковую аналитику.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://docs.nats.io/nats-concepts/jetstream">NATS JetStream concepts</a> — официальное объяснение persistent streams и consumers, EN.</li>
+<li><a href="https://www.rabbitmq.com/tutorials">RabbitMQ tutorials</a> — официальные сценарии queues, acknowledgements и routing, EN.</li>
+<li><a href="https://kafka.apache.org/documentation/">Apache Kafka documentation</a> — базовые concepts topics, partitions и replication, EN.</li>
+</ul>
+<hr>
+<h2 id="6-компонент-3-llm-orchestration-framework">6. Компонент 3 - LLM Orchestration Framework</h2>
+<p><strong>Ответственность:</strong> prompt management, provider routing, chains/graphs, RAG workflow, caching, fallback и observability hooks.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>RAG / Agents / Providers / Prompt versioning / Cache / Observability / Maturity</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>LangChain</td>
+<td>Chains, tools, integrations</td>
+<td>Abstraction churn, dependency weight</td>
+<td>Huge ecosystem, many provider integrations</td>
+<td>OSS <code>$0</code>; LangSmith paid for tracing/evals</td>
+<td>App-level</td>
+<td>M</td>
+<td>MIT</td>
+<td>Yes for OSS</td>
+<td>Strong RAG, agents, many providers, LangSmith for versioning/observability</td>
+</tr>
+<tr>
+<td>2</td>
+<td>LlamaIndex</td>
+<td>RAG data framework</td>
+<td>Can duplicate existing retriever abstractions</td>
+<td>Strong indexing/query abstractions, doc loaders</td>
+<td>OSS <code>$0</code>; LlamaCloud/LlamaParse paid</td>
+<td>App-level</td>
+<td>M</td>
+<td>MIT</td>
+<td>Yes for OSS</td>
+<td>Excellent RAG, agents improving, many providers, good evals</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Haystack</td>
+<td>Production RAG pipelines</td>
+<td>Smaller ecosystem than LangChain</td>
+<td>Clean pipeline components, search integration</td>
+<td>OSS <code>$0</code>; deepset Cloud quote</td>
+<td>App-level</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes OSS</td>
+<td>Strong RAG, provider integrations, production-friendly</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Semantic Kernel</td>
+<td>Planner/orchestration SDK</td>
+<td>Microsoft ecosystem bias</td>
+<td>Good enterprise patterns, C#/Python/Java</td>
+<td>OSS <code>$0</code>; Azure services billed separately</td>
+<td>App-level</td>
+<td>M</td>
+<td>MIT</td>
+<td>Yes OSS</td>
+<td>Good orchestration, agents, Azure integrations</td>
+</tr>
+<tr>
+<td>5</td>
+<td>LangGraph</td>
+<td>Stateful agent/workflow graphs</td>
+<td>Adds complexity if simple chain enough</td>
+<td>Deterministic graph execution, durable workflows</td>
+<td>OSS <code>$0</code>; LangSmith optional</td>
+<td>App-level</td>
+<td>M/H</td>
+<td>MIT</td>
+<td>Yes OSS</td>
+<td>Strong agents/workflows, checkpointing, observability via LangSmith</td>
+</tr>
+<tr>
+<td>6</td>
+<td>DSPy</td>
+<td>Prompt/program optimization</td>
+<td>Requires dataset/eval discipline</td>
+<td>Declarative optimization, useful for prompt tuning</td>
+<td>OSS <code>$0</code></td>
+<td>App-level, eval infra</td>
+<td>M/H</td>
+<td>MIT</td>
+<td>Yes OSS</td>
+<td>Good for optimization, not primary RAG runtime</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Guidance</td>
+<td>Structured generation control</td>
+<td>Smaller ecosystem, less production governance</td>
+<td>Fine-grained constrained decoding</td>
+<td>OSS <code>$0</code></td>
+<td>App-level</td>
+<td>M</td>
+<td>MIT</td>
+<td>Yes OSS</td>
+<td>Useful for schema/structured output</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Instructor</td>
+<td>Typed structured outputs</td>
+<td>Narrow scope, provider compatibility varies</td>
+<td>Simple Pydantic extraction, low dependency</td>
+<td>OSS <code>$0</code></td>
+<td>App-level</td>
+<td>S</td>
+<td>MIT</td>
+<td>Yes OSS</td>
+<td>Great structured output, not full orchestration</td>
+</tr>
+<tr>
+<td>9</td>
+<td>LiteLLM</td>
+<td>Provider gateway, fallback, budgets</td>
+<td>Another service in path, config governance</td>
+<td>OpenAI-compatible proxy, routing, budget caps</td>
+<td>OSS <code>$0</code>; LiteLLM Cloud paid/quote</td>
+<td>1-2 vCPU proxy + DB optional</td>
+<td>S/M</td>
+<td>MIT for OSS</td>
+<td>Yes self-host</td>
+<td>Strong provider abstraction/cache/logging</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Portkey</td>
+<td>AI gateway, routing, observability</td>
+<td>SaaS/commercial lock-in if cloud</td>
+<td>Guardrails, cache, retries, analytics</td>
+<td>OSS gateway + paid cloud/enterprise</td>
+<td>Proxy service</td>
+<td>S/M</td>
+<td>Mixed OSS/commercial</td>
+<td>Self-host options need review</td>
+<td>Strong gateway features</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Helicone</td>
+<td>LLM observability/gateway</td>
+<td>SaaS residency unless self-host</td>
+<td>Simple logs, cache, cost analytics</td>
+<td>OSS/self-host; cloud plans</td>
+<td>Proxy + ClickHouse/Postgres</td>
+<td>S/M</td>
+<td>Apache 2.0 / commercial</td>
+<td>Yes self-host</td>
+<td>Strong observability, not workflow engine</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Braintrust</td>
+<td>Evals, prompt management, observability</td>
+<td>SaaS data/compliance, price quote at scale</td>
+<td>Strong evaluation workflow</td>
+<td>Free/paid tiers, enterprise quote</td>
+<td>SaaS/self-host options vary</td>
+<td>M</td>
+<td>Commercial</td>
+<td>Depends on deployment</td>
+<td>Strong eval/prompt governance</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>LiteLLM + Instructor + existing prompt files</td>
+<td><code>$0-5k</code></td>
+<td>Need provider fallback and typed outputs without new workflow engine</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>LlamaIndex or Haystack + LiteLLM</td>
+<td><code>$5k-25k</code></td>
+<td>Production RAG pipelines with clear components</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>LangGraph + LangSmith/Portkey/Braintrust</td>
+<td><code>$25k-100k+</code></td>
+<td>Complex multi-step workflows, eval governance, human-in-loop</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Current hand-written pipeline -&gt; LiteLLM</td>
+<td>Keep <code>LLMClient</code> API, route provider calls through proxy</td>
+<td>Low</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>LiteLLM -&gt; LangChain/LlamaIndex/Haystack</td>
+<td>Wrap existing retriever/generator as components</td>
+<td>Low-medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>LangChain -&gt; LangGraph</td>
+<td>Convert linear chain to graph nodes gradually</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>SaaS observability -&gt; self-host</td>
+<td>Export logs/evals, standardize <code>run_id</code> and OpenTelemetry spans</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>LLM Orchestration Framework — это слой, который решает, какой prompt, provider, cache, fallback и workflow использовать для конкретного запроса.</li>
+<li>Для проекта это важно, потому что без orchestration команда быстро получает набор разрозненных if/else: часть запросов уходит в <code>GigaChat</code>, часть в <code>Ollama</code>, часть требует structured output, но это трудно тестировать и объяснять аудитору.</li>
+<li>Технически: <code>LiteLLM</code> может дать единый OpenAI-compatible gateway и budgets; <code>Instructor</code> помогает получать Pydantic-структуры; <code>LlamaIndex</code>, <code>Haystack</code>, <code>LangChain</code> или <code>LangGraph</code> добавляют готовые RAG pipelines и graph workflows.</li>
+<li>Когда выбирать: начать можно с <code>LiteLLM + Instructor + prompt files</code>; полноценный framework нужен, когда появляются multi-step flows, evals, prompt versioning и governance.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://docs.litellm.ai/docs/">LiteLLM documentation</a> — provider routing, fallback и budget controls, EN.</li>
+<li><a href="https://docs.llamaindex.ai/">LlamaIndex documentation</a> — RAG data framework, ingestion и query engines, EN.</li>
+<li><a href="https://python.langchain.com/docs/tutorials/rag/">LangChain RAG tutorial</a> — пример RAG workflow на LangChain, EN.</li>
+</ul>
+<hr>
+<h2 id="7-компонент-4-document-parsing-ingestion">7. Компонент 4 - Document Parsing / Ingestion</h2>
+<p><strong>Ответственность:</strong> извлекать текст, layout, таблицы и ссылки из DOCX/XLSX/PDF/PPTX, сохраняя locators.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>Formats / Layout / Tables / OCR / Speed / GPU / Multilingual</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Unstructured.io</td>
+<td>Multi-format partitioning</td>
+<td>Some features/API commercial, parser variability</td>
+<td>Broad formats, chunking strategies</td>
+<td>OSS <code>$0</code>; hosted API/platform paid/quote</td>
+<td>CPU, optional OCR deps</td>
+<td>M</td>
+<td>Apache 2.0 core</td>
+<td>Yes OSS self-host</td>
+<td>DOCX/XLSX/PDF/PPTX, good layout, OCR optional</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Docling (IBM)</td>
+<td>PDF/DOCX structure extraction</td>
+<td>Young but active, model downloads</td>
+<td>Strong layout/table pipeline, local-first</td>
+<td><code>$0 license</code></td>
+<td>CPU works; GPU helps OCR/layout models</td>
+<td>M</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>PDF/DOCX/HTML/images, good layout/tables/OCR</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Marker</td>
+<td>PDF to Markdown/JSON</td>
+<td>GPU recommended for speed/quality, PDF-focused</td>
+<td>High-quality PDF markdown extraction</td>
+<td>OSS <code>$0</code></td>
+<td>GPU preferred, CPU slower</td>
+<td>M</td>
+<td>GPL/other components need review</td>
+<td>Yes if license accepted</td>
+<td>PDF/images, good layout/OCR</td>
+</tr>
+<tr>
+<td>4</td>
+<td>MinerU</td>
+<td>Document parsing/OCR</td>
+<td>Heavier ML stack, ops complexity</td>
+<td>Strong academic/enterprise doc parsing</td>
+<td>OSS <code>$0</code></td>
+<td>GPU preferred</td>
+<td>M/H</td>
+<td>AGPL/Apache mix depending package, review required</td>
+<td>Yes if license accepted</td>
+<td>PDF/images, OCR/layout strong</td>
+</tr>
+<tr>
+<td>5</td>
+<td>olmOCR</td>
+<td>OCR for documents</td>
+<td>OCR-only layer, model/runtime cost</td>
+<td>Local OCR for scanned PDFs</td>
+<td>OSS <code>$0</code></td>
+<td>GPU recommended</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>OCR strong, combine with parser</td>
+</tr>
+<tr>
+<td>6</td>
+<td>PyMuPDF</td>
+<td>PDF text/images/layout primitives</td>
+<td>Manual structure logic needed</td>
+<td>Fast, reliable, simple</td>
+<td>OSS/commercial dual; AGPL/commercial review</td>
+<td>CPU</td>
+<td>S</td>
+<td>AGPL/commercial</td>
+<td>Yes if license accepted</td>
+<td>PDF only, layout primitives, no OCR</td>
+</tr>
+<tr>
+<td>7</td>
+<td>pdfplumber</td>
+<td>PDF text/tables</td>
+<td>Slower, PDF quirks</td>
+<td>Good table/debug extraction</td>
+<td><code>$0 license</code></td>
+<td>CPU</td>
+<td>S</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>PDF tables/layout, no OCR</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Camelot</td>
+<td>PDF table extraction</td>
+<td>Works best on text PDFs, Java/Ghostscript deps</td>
+<td>Focused table extraction</td>
+<td><code>$0 license</code></td>
+<td>CPU</td>
+<td>S/M</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>PDF tables strong for lattice/stream</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Tabula-py</td>
+<td>PDF table extraction</td>
+<td>Java dependency, scanned PDFs need OCR</td>
+<td>Mature simple table extraction</td>
+<td><code>$0 license</code></td>
+<td>CPU + Java</td>
+<td>S/M</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>PDF tables</td>
+</tr>
+<tr>
+<td>10</td>
+<td>LlamaParse</td>
+<td>Managed parsing API</td>
+<td>SaaS, data residency, usage cost</td>
+<td>Fast high-quality parsing, integrates LlamaIndex</td>
+<td>Paid credits/subscription</td>
+<td>Managed</td>
+<td>XS/S</td>
+<td>Commercial SaaS</td>
+<td>No local by default</td>
+<td>Broad formats, strong layout, OCR managed</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Azure Document Intelligence</td>
+<td>OCR/forms/layout/tables</td>
+<td>Azure lock-in, residency approval</td>
+<td>Mature enterprise OCR/layout</td>
+<td>Free 500 pages/month; Read <code>$1.50/1k pages</code>, Layout/Prebuilt <code>$10/1k</code>, custom extraction <code>$30/1k</code></td>
+<td>Managed</td>
+<td>S/M</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Broad docs, strong OCR/tables</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Google Document AI</td>
+<td>OCR/processors/extractors</td>
+<td>GCP lock-in, custom processor cost</td>
+<td>Strong managed extraction, human review options</td>
+<td>OCR <code>$1.50/1k pages</code>, Layout <code>$10/1k</code>, Form Parser/Custom Extractor <code>$30/1k</code></td>
+<td>Managed</td>
+<td>S/M</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Broad docs, strong OCR/layout</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Amazon Textract</td>
+<td>OCR/forms/tables/queries</td>
+<td>AWS lock-in, per-page cost</td>
+<td>Mature OCR, forms/tables, async jobs</td>
+<td>Detect text starts around <code>$1.50/1k pages</code>; tables/forms/queries higher by feature and region</td>
+<td>Managed</td>
+<td>S/M</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>PDF/images, strong OCR/tables</td>
+</tr>
+<tr>
+<td>14</td>
+<td>python-docx + openpyxl</td>
+<td>DOCX/XLSX custom parser</td>
+<td>Limited PDFs/OCR, custom layout logic</td>
+<td>Already fits current code, deterministic</td>
+<td><code>$0 license</code></td>
+<td>CPU</td>
+<td>S</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>DOCX/XLSX good enough, no OCR</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>python-docx/openpyxl + PyMuPDF/pdfplumber</td>
+<td><code>$0-5k</code></td>
+<td>Text DOCX/XLSX/PDF, deterministic locators, no scanned-heavy docs</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>Docling + Unstructured + custom locator layer</td>
+<td><code>$5k-20k</code></td>
+<td>Mixed PDF/DOCX with layout/table preservation and local residency</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>Azure DI / Textract / Document AI / LlamaParse</td>
+<td><code>$20k-100k+</code> usage</td>
+<td>High OCR quality, scanned docs, managed SLA and review workflows</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Current parsers -&gt; Docling/Unstructured</td>
+<td>Keep <code>load_requirements_by_extension</code>, enrich locator fields additively</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Local parsers -&gt; managed OCR</td>
+<td>Route only scanned/failed docs to SaaS, store raw + extracted JSON</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Managed OCR -&gt; local</td>
+<td>Preserve canonical <code>DocumentBlock</code> JSON, re-run extraction asynchronously</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>One parser -&gt; ensemble</td>
+<td>Add confidence and provenance per block, keep best block by type</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Document Parsing / Ingestion — это входной конвейер, который превращает DOCX/XLSX/PDF/PPTX в нормальные блоки текста, таблицы и locators, пригодные для поиска и цитирования.</li>
+<li>Для проекта это важно, потому что плохой parser теряет строки таблиц, номера разделов и страницы. Тогда LLM может отвечать красиво, но без проверяемого evidence, что ломает доверие БА и NFR по цитируемости.</li>
+<li>Технически: текущие <code>python-docx</code>/<code>openpyxl</code> остаются дешёвым baseline, <code>Docling</code> и <code>Unstructured</code> добавляют layout/table extraction, а managed OCR (<code>Azure DI</code>, <code>Textract</code>, <code>Document AI</code>) включается только после compliance approval.</li>
+<li>Когда выбирать: local parsers — для текстовых документов и RU-residency; OCR/managed services — для сканов, сложных таблиц и случаев, где качество extraction важнее стоимости и договорных ограничений.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://github.com/docling-project/docling">Docling GitHub repository</a> — local-first document conversion, EN.</li>
+<li><a href="https://docs.unstructured.io/open-source/introduction/overview">Unstructured open source overview</a> — partitioning, chunking и supported formats, EN.</li>
+<li><a href="https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/">Azure Document Intelligence documentation</a> — managed OCR/layout extraction, EN.</li>
+</ul>
+<hr>
+<h2 id="8-компонент-5-embedding-models">8. Компонент 5 - Embedding Models</h2>
+<p><strong>Ответственность:</strong> превращать chunks и queries в векторы для semantic и hybrid retrieval.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>Dim / RU+EN / Max length / Speed / Size / Benchmark / API cost</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>BAAI/bge-m3</td>
+<td>Multilingual dense+sparse embeddings</td>
+<td>Local model ops, CPU latency</td>
+<td>Strong multilingual/RU, current candidate, long context</td>
+<td><code>$0 license</code>; infra only</td>
+<td>CPU usable, GPU faster; ~2 GB model class</td>
+<td>S/M</td>
+<td>MIT</td>
+<td>Yes local</td>
+<td>1024 dim, RU/EN strong, 8192 tokens</td>
+</tr>
+<tr>
+<td>2</td>
+<td>all-MiniLM-L6-v2</td>
+<td>Cheap small embeddings</td>
+<td>English-biased, lower RU/domain quality</td>
+<td>Very fast CPU baseline</td>
+<td><code>$0 license</code></td>
+<td>CPU, small memory</td>
+<td>XS/S</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>384 dim, short max length, fast</td>
+</tr>
+<tr>
+<td>3</td>
+<td>OpenAI text-embedding-3-large</td>
+<td>High-quality API embeddings</td>
+<td>External SaaS, data residency, token cost</td>
+<td>Strong multilingual, dimensions shortening</td>
+<td><code>$0.13 / 1M tokens</code>, batch <code>$0.065</code></td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial API</td>
+<td>No local; region/data policy approval needed</td>
+<td>3072 dim default, strong RU/EN</td>
+</tr>
+<tr>
+<td>4</td>
+<td>OpenAI text-embedding-3-small</td>
+<td>Cheap API embeddings</td>
+<td>Same SaaS risks</td>
+<td>Very low price, good baseline</td>
+<td><code>$0.02 / 1M tokens</code>, batch <code>$0.01</code></td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial API</td>
+<td>No local</td>
+<td>1536 dim default</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Cohere embed-multilingual-v3/v4</td>
+<td>Multilingual enterprise embeddings</td>
+<td>SaaS/commercial, pricing/version changes</td>
+<td>Strong multilingual, enterprise support</td>
+<td>Public pricing page; commonly per-token usage, verify quote</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial API</td>
+<td>No local unless private deployment agreed</td>
+<td>RU/EN strong, API</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Voyage AI voyage-3</td>
+<td>Retrieval-optimized API embeddings</td>
+<td>SaaS, smaller enterprise footprint</td>
+<td>Strong retrieval benchmarks, rerank pairing</td>
+<td>Public usage pricing, verify current model rate</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial API</td>
+<td>No local</td>
+<td>Dim/model-dependent</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Nomic embed-text</td>
+<td>Open/local embeddings</td>
+<td>Quality varies by language/domain</td>
+<td>Open weights, local/private</td>
+<td><code>$0 license</code> for open model; Nomic API paid</td>
+<td>CPU/GPU local</td>
+<td>S/M</td>
+<td>Apache 2.0 for model variants</td>
+<td>Yes local</td>
+<td>Good EN, RU must benchmark</td>
+</tr>
+<tr>
+<td>8</td>
+<td>jina-embeddings-v3/v4/v5</td>
+<td>Multilingual long-context embeddings</td>
+<td>API/local version selection, license review</td>
+<td>Strong multilingual, long context, API or local</td>
+<td>Open weights/API paid tiers</td>
+<td>CPU/GPU local or managed</td>
+<td>M</td>
+<td>CC BY-NC / Apache/commercial varies by model, review required</td>
+<td>Local possible if license accepted</td>
+<td>RU/EN strong, long context</td>
+</tr>
+<tr>
+<td>9</td>
+<td>e5-mistral-7b-instruct</td>
+<td>High-quality instruct embeddings</td>
+<td>Large/slow, GPU-heavy</td>
+<td>Strong benchmark quality</td>
+<td><code>$0 license</code></td>
+<td>GPU recommended, 7B class</td>
+<td>M/H</td>
+<td>MIT/Apache model-card review</td>
+<td>Yes local</td>
+<td>4096 dim class, high quality</td>
+</tr>
+<tr>
+<td>10</td>
+<td>intfloat/multilingual-e5-large</td>
+<td>Multilingual retrieval embeddings</td>
+<td>Older vs bge-m3, local ops</td>
+<td>Strong multilingual baseline</td>
+<td><code>$0 license</code></td>
+<td>CPU/GPU, ~1 GB class</td>
+<td>S/M</td>
+<td>MIT</td>
+<td>Yes local</td>
+<td>1024 dim, RU/EN strong</td>
+</tr>
+<tr>
+<td>11</td>
+<td>GigaChat embeddings</td>
+<td>RU provider embeddings</td>
+<td>Provider access/pricing, external API</td>
+<td>RU ecosystem, local compliance may be easier than US SaaS</td>
+<td>Provider tariff/quote</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial API</td>
+<td>RU provider, contract-dependent</td>
+<td>RU strong, API</td>
+</tr>
+<tr>
+<td>12</td>
+<td>YandexGPT embeddings</td>
+<td>RU provider embeddings</td>
+<td>Provider lock-in, tariff changes</td>
+<td>RU cloud ecosystem, possible data residency</td>
+<td>Provider tariff/quote</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial API</td>
+<td>RU cloud/contract-dependent</td>
+<td>RU strong, API</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>bge-m3 local</td>
+<td><code>$1k-8k</code> infra</td>
+<td>Default RU-resident retrieval with good quality</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>bge-m3 + multilingual-e5/Jina benchmark fallback</td>
+<td><code>$5k-20k</code></td>
+<td>Need quality A/B without external data transfer</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>OpenAI/Cohere/Voyage/RU provider API with local fallback</td>
+<td><code>$10k-100k+</code> usage</td>
+<td>Strong quality, managed throughput, approved external processing</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Any embedding model -&gt; another</td>
+<td>Re-embed corpus into parallel index, run retrieval eval, switch alias</td>
+<td>Low with dual index</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Local -&gt; API</td>
+<td>Add batch embedding worker, redact PII before calls, cache by text hash</td>
+<td>Low</td>
+<td>Medium-high compliance</td>
+</tr>
+<tr>
+<td>API -&gt; local</td>
+<td>Keep original text/chunk IDs, re-embed asynchronously, compare recall/MRR</td>
+<td>Low-medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>768 dim -&gt; 1024/3072 dim</td>
+<td>Requires new vector index/schema; cannot mix dims in same field</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Embedding Model — это &quot;переводчик смысла в числа&quot;: каждый chunk и query превращаются в vector, чтобы search мог находить похожие формулировки даже без совпадения слов.</li>
+<li>Для проекта это важно, потому что тендерные требования часто пишутся разными словами: &quot;SSO&quot;, &quot;единый вход&quot;, &quot;авторизация через IdP&quot;. Хорошая multilingual embedding model повышает recall без ручного словаря на каждую фразу.</li>
+<li>Технически: модель фиксирует размерность index (<code>768</code>, <code>1024</code>, <code>3072</code>), поэтому смена <code>bge-m3</code> на OpenAI/Cohere/Jina почти всегда требует parallel re-embedding и отдельного vector field/index.</li>
+<li>Когда выбирать: <code>bge-m3</code> — RU-resident default; <code>multilingual-e5</code>/<code>Jina</code> — benchmark fallback; OpenAI/Cohere/Voyage/RU provider API — только после approval на external processing и budget.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://huggingface.co/BAAI/bge-m3">BAAI/bge-m3 model card</a> — multilingual dense+sparse embeddings, EN.</li>
+<li><a href="https://docs.cohere.com/docs/embeddings">Cohere embeddings documentation</a> — managed multilingual embeddings и типовые API-сценарии, EN.</li>
+<li><a href="https://huggingface.co/intfloat/multilingual-e5-large">intfloat/multilingual-e5-large</a> — multilingual retrieval baseline, EN.</li>
+</ul>
+<hr>
+<h2 id="9-компонент-6-local-llm-serving">9. Компонент 6 - Local LLM Serving</h2>
+<p><strong>Ответственность:</strong> обслуживать локальные модели для PII-sensitive generation, routing/classification, fallback и batch jobs.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>Quant / Throughput / TTFT / GPU / CPU / Multi-GPU / Batching / API / Formats</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Ollama</td>
+<td>Simple local model serving</td>
+<td>Lower throughput, limited production controls</td>
+<td>Fast install, GGUF, local dev</td>
+<td><code>$0 license</code></td>
+<td>CPU or GPU, 8-24 GB VRAM for 7B-13B</td>
+<td>XS/S</td>
+<td>MIT</td>
+<td>Yes local</td>
+<td>Good quant, CPU/GPU, OpenAI-compatible partial</td>
+</tr>
+<tr>
+<td>2</td>
+<td>vLLM</td>
+<td>High-throughput inference</td>
+<td>GPU-first, ops tuning</td>
+<td>PagedAttention, continuous batching, OpenAI API</td>
+<td><code>$0 license</code></td>
+<td>NVIDIA GPU, 16-80 GB VRAM</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes local</td>
+<td>Excellent throughput/batching, multi-GPU</td>
+</tr>
+<tr>
+<td>3</td>
+<td>TGI</td>
+<td>HF production serving</td>
+<td>GPU ops, model compatibility</td>
+<td>Mature server, streaming, quantization</td>
+<td><code>$0 license</code></td>
+<td>GPU recommended</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes local</td>
+<td>Good throughput, safetensors</td>
+</tr>
+<tr>
+<td>4</td>
+<td>llama.cpp</td>
+<td>CPU/GPU GGUF inference</td>
+<td>Lower throughput for high concurrency</td>
+<td>Very portable, quantization, edge/offline</td>
+<td><code>$0 license</code></td>
+<td>CPU viable, Metal/CUDA/Vulkan</td>
+<td>S/M</td>
+<td>MIT</td>
+<td>Yes local</td>
+<td>Excellent quant, CPU-only strong, GGUF</td>
+</tr>
+<tr>
+<td>5</td>
+<td>TensorRT-LLM</td>
+<td>NVIDIA optimized inference</td>
+<td>NVIDIA lock-in, complex build</td>
+<td>Best latency/throughput on NVIDIA</td>
+<td><code>$0 license</code></td>
+<td>NVIDIA GPU, high VRAM</td>
+<td>H</td>
+<td>Apache 2.0</td>
+<td>Yes local</td>
+<td>Excellent throughput, multi-GPU</td>
+</tr>
+<tr>
+<td>6</td>
+<td>DeepSpeed-MII/Inference</td>
+<td>Distributed inference</td>
+<td>Complex, less simple than vLLM</td>
+<td>Large model distributed serving</td>
+<td><code>$0 license</code></td>
+<td>Multi-GPU</td>
+<td>H</td>
+<td>MIT</td>
+<td>Yes local</td>
+<td>Multi-GPU strong</td>
+</tr>
+<tr>
+<td>7</td>
+<td>HF Transformers native</td>
+<td>Baseline model execution</td>
+<td>Not optimized serving by default</td>
+<td>Maximum compatibility, easy experiments</td>
+<td><code>$0 license</code></td>
+<td>CPU/GPU</td>
+<td>S/M</td>
+<td>Apache 2.0</td>
+<td>Yes local</td>
+<td>Good for experiments, not high QPS</td>
+</tr>
+<tr>
+<td>8</td>
+<td>CTranslate2</td>
+<td>Efficient CPU/GPU inference</td>
+<td>Model conversion required, less LLM-chat ecosystem</td>
+<td>Fast CPU/GPU, quantized</td>
+<td><code>$0 license</code></td>
+<td>CPU/GPU</td>
+<td>M</td>
+<td>MIT</td>
+<td>Yes local</td>
+<td>Strong CPU, model format conversion</td>
+</tr>
+<tr>
+<td>9</td>
+<td>MLX</td>
+<td>Apple Silicon local inference</td>
+<td>Mac-only, not server standard</td>
+<td>Great developer laptops/M-series</td>
+<td><code>$0 license</code></td>
+<td>Apple Silicon unified memory</td>
+<td>S</td>
+<td>MIT</td>
+<td>Local only</td>
+<td>Metal, local dev</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Exo</td>
+<td>Decentralized local inference</td>
+<td>Young, production maturity risk</td>
+<td>Multi-device local experiments</td>
+<td>OSS <code>$0</code></td>
+<td>Multiple local devices</td>
+<td>M/H</td>
+<td>Apache/MIT review</td>
+<td>Yes local</td>
+<td>Experimental distributed serving</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Replicate self-host / Cog</td>
+<td>Model packaging/deploy</td>
+<td>SaaS path external, self-host ops</td>
+<td>Reproducible model containers</td>
+<td>OSS tools + cloud paid</td>
+<td>Docker/GPU</td>
+<td>M</td>
+<td>Apache 2.0 tools / commercial cloud</td>
+<td>Self-host possible</td>
+<td>Good packaging</td>
+</tr>
+<tr>
+<td>12</td>
+<td>BentoML</td>
+<td>Model service packaging</td>
+<td>Need infra decisions, not LLM-specific enough alone</td>
+<td>API packaging, deployment, scaling</td>
+<td>OSS <code>$0</code>; BentoCloud paid</td>
+<td>CPU/GPU</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes self-host</td>
+<td>Good service framework</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>Ollama / llama.cpp</td>
+<td><code>$1k-8k</code></td>
+<td>Single-node pilot, easy install, offline demos</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>vLLM or TGI</td>
+<td><code>$10k-60k</code> GPU infra</td>
+<td>Production pilot with concurrency and OpenAI-compatible API</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>TensorRT-LLM + KServe/BentoML</td>
+<td><code>$60k-300k+</code></td>
+<td>Dedicated GPU platform, strict latency/SLA</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Ollama -&gt; vLLM</td>
+<td>Keep OpenAI-compatible client, change base URL/model names, validate prompts</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>vLLM -&gt; TGI</td>
+<td>Abstract streaming/chat payload differences</td>
+<td>Low-medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Local -&gt; managed API</td>
+<td>Route through LiteLLM, retain local fallback for PII</td>
+<td>Low</td>
+<td>Compliance high</td>
+</tr>
+<tr>
+<td>Single GPU -&gt; multi-GPU</td>
+<td>Benchmark tensor/pipeline parallelism, pin model versions</td>
+<td>Medium</td>
+<td>High</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Local LLM Serving — это способ запускать LLM внутри инфраструктуры проекта, чтобы sensitive prompts и документы не уходили во внешний API.</li>
+<li>Для проекта это важно, потому что часть запросов содержит PII, коммерческие условия или внутренние требования заказчика. Локальный serving даёт контроль над residency, но требует CPU/GPU resources и ops-навыков.</li>
+<li>Технически: <code>Ollama</code> и <code>llama.cpp</code> хороши для установки и demo; <code>vLLM</code>/<code>TGI</code> дают batching и throughput; <code>TensorRT-LLM</code> нужен, когда есть dedicated NVIDIA GPU platform и строгие SLA.</li>
+<li>Когда выбирать: для АРМ и offline pilot — <code>Ollama</code>; для production pilot с несколькими пользователями — <code>vLLM</code>; для enterprise GPU platform — <code>TensorRT-LLM + KServe/BentoML</code>.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://github.com/ollama/ollama/blob/main/docs/api.md">Ollama API documentation</a> — локальный HTTP API для model serving, EN.</li>
+<li><a href="https://docs.vllm.ai/">vLLM documentation</a> — high-throughput serving и OpenAI-compatible server, EN.</li>
+<li><a href="https://huggingface.co/docs/text-generation-inference/index">Hugging Face TGI documentation</a> — production inference server, EN.</li>
+</ul>
+<hr>
+<h2 id="10-компонент-7-cross-encoder-reranker">10. Компонент 7 - Cross-Encoder Reranker</h2>
+<p><strong>Ответственность:</strong> переупорядочивать top-K retrieval candidates, чтобы повысить precision и grounding.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>Accuracy / Latency / Size / GPU vs CPU / API cost / Languages / Integration</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>BAAI/bge-reranker-large</td>
+<td>Local high-quality rerank</td>
+<td>CPU latency, GPU needed for p95</td>
+<td>Strong multilingual, popular</td>
+<td><code>$0 license</code></td>
+<td>GPU recommended; CPU slower</td>
+<td>S/M</td>
+<td>MIT</td>
+<td>Yes local</td>
+<td>High accuracy, medium-high latency</td>
+</tr>
+<tr>
+<td>2</td>
+<td>BAAI/bge-reranker-base</td>
+<td>Local balanced rerank</td>
+<td>Lower quality than large</td>
+<td>Better latency/cost</td>
+<td><code>$0 license</code></td>
+<td>CPU/GPU</td>
+<td>S</td>
+<td>MIT</td>
+<td>Yes local</td>
+<td>Good accuracy, medium latency</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Cohere Rerank API</td>
+<td>Managed reranking</td>
+<td>SaaS/residency, usage cost</td>
+<td>Strong multilingual, simple API</td>
+<td>Public pricing/check current rate; OpenRouter lists rerank-v3.5 per search</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial API</td>
+<td>No local</td>
+<td>High accuracy, low integration cost</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Jina Reranker</td>
+<td>API/local reranker</td>
+<td>License/model/version review</td>
+<td>Multilingual, listwise models</td>
+<td>API paid; local model possible</td>
+<td>Managed or GPU local</td>
+<td>M</td>
+<td>Mixed model licenses</td>
+<td>Local possible</td>
+<td>High multilingual quality</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Voyage AI rerank</td>
+<td>Managed reranking</td>
+<td>SaaS/residency</td>
+<td>Strong retrieval stack</td>
+<td>Usage pricing, verify current</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial API</td>
+<td>No local</td>
+<td>High accuracy, simple API</td>
+</tr>
+<tr>
+<td>6</td>
+<td>cross-encoder/ms-marco-MiniLM-L-6-v2</td>
+<td>Small local reranker</td>
+<td>English-biased, RU lower</td>
+<td>Very fast CPU baseline</td>
+<td><code>$0 license</code></td>
+<td>CPU</td>
+<td>XS/S</td>
+<td>Apache 2.0</td>
+<td>Yes local</td>
+<td>Medium accuracy, low latency</td>
+</tr>
+<tr>
+<td>7</td>
+<td>cross-encoder/ms-marco-TinyBERT-L-2-v2</td>
+<td>Tiny local reranker</td>
+<td>Lower quality</td>
+<td>Very low latency</td>
+<td><code>$0 license</code></td>
+<td>CPU</td>
+<td>XS/S</td>
+<td>Apache 2.0</td>
+<td>Yes local</td>
+<td>Low-medium accuracy</td>
+</tr>
+<tr>
+<td>8</td>
+<td>NV-RerankQA</td>
+<td>NVIDIA reranker</td>
+<td>Hardware/vendor dependence</td>
+<td>Optimized enterprise AI stack</td>
+<td>API/NVIDIA platform quote</td>
+<td>GPU/API</td>
+<td>M</td>
+<td>Commercial/model license</td>
+<td>Local possible with NVIDIA stack</td>
+<td>High performance, enterprise support</td>
+</tr>
+<tr>
+<td>9</td>
+<td>RankGPT</td>
+<td>LLM-based reranking</td>
+<td>Expensive/slow, hallucination risk</td>
+<td>Strong reasoning over candidates</td>
+<td>Depends on LLM tokens</td>
+<td>LLM API/local</td>
+<td>M</td>
+<td>Method, not product</td>
+<td>Local if local LLM</td>
+<td>High accuracy, high latency</td>
+</tr>
+<tr>
+<td>10</td>
+<td>ColBERT v2</td>
+<td>Late-interaction retrieval/rerank</td>
+<td>Index/storage complexity</td>
+<td>Strong precision with token-level matching</td>
+<td><code>$0 license</code>; infra</td>
+<td>GPU for indexing, larger index</td>
+<td>H</td>
+<td>MIT</td>
+<td>Yes local</td>
+<td>High quality, higher storage</td>
+</tr>
+<tr>
+<td>11</td>
+<td>FlashRank</td>
+<td>Lightweight reranking library</td>
+<td>Model choices limited</td>
+<td>Simple CPU rerank for app</td>
+<td><code>$0 license</code></td>
+<td>CPU</td>
+<td>XS/S</td>
+<td>Apache 2.0</td>
+<td>Yes local</td>
+<td>Good budget quality</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Pinecone hosted rerank</td>
+<td>Managed rerank inside vector platform</td>
+<td>Vendor lock-in/SaaS</td>
+<td>Integrated with Pinecone retrieval</td>
+<td>Included quotas + usage</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Simple if already Pinecone</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>FlashRank or MiniLM</td>
+<td><code>$0-3k</code></td>
+<td>CPU-only pilot, precision boost without GPU</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>bge-reranker-base/large</td>
+<td><code>$5k-30k</code></td>
+<td>Local RU-resident rerank for top-20/top-50</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>Cohere/Jina/Voyage or ColBERT</td>
+<td><code>$15k-100k+</code></td>
+<td>Highest precision with approved SaaS or dedicated infra</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>No reranker -&gt; local reranker</td>
+<td>Add optional rerank stage after top-K retrieval, feature flag</td>
+<td>Low</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Local -&gt; API</td>
+<td>Route only de-identified snippets, cache scores by query/chunk hash</td>
+<td>Low</td>
+<td>Compliance medium-high</td>
+</tr>
+<tr>
+<td>Cross-encoder -&gt; ColBERT</td>
+<td>Requires new indexing pipeline and storage, A/B side-by-side</td>
+<td>Medium-high</td>
+<td>High</td>
+</tr>
+<tr>
+<td>API -&gt; local</td>
+<td>Keep scoring contract <code>{chunk_id, score}</code>, replace provider</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Cross-Encoder Reranker — это &quot;второй проверяющий&quot; после поиска: search отдаёт top-K кандидатов, а reranker перечитывает пары <code>query + chunk</code> и сортирует их по реальной полезности.</li>
+<li>Для проекта это важно, потому что качество ответа часто улучшается не новой LLM, а более точным evidence set. Reranker снижает риск, что в prompt попадёт похожий, но нерелевантный раздел.</li>
+<li>Технически: <code>bge-reranker-base/large</code> можно запустить локально; <code>FlashRank</code> даёт быстрый CPU baseline; Cohere/Jina/Voyage API удобны, но требуют de-identification и compliance gate.</li>
+<li>Когда выбирать: без GPU начать с <code>FlashRank</code>/<code>MiniLM</code>; для RU-resident pilot использовать <code>bge-reranker</code>; для максимальной precision рассмотреть ColBERT или managed rerank после approval.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://huggingface.co/BAAI/bge-reranker-large">BAAI/bge-reranker-large model card</a> — multilingual local reranker, EN.</li>
+<li><a href="https://docs.cohere.com/docs/rerank-2">Cohere Rerank documentation</a> — managed reranking API, EN.</li>
+<li><a href="https://github.com/PrithivirajDamodaran/FlashRank">FlashRank GitHub repository</a> — lightweight CPU reranking library, EN.</li>
+</ul>
+<hr>
+<h2 id="11-компонент-8-observability-stack">11. Компонент 8 - Observability Stack</h2>
+<p><strong>Ответственность:</strong> logs, metrics, traces, alerting, dashboards и incident/debug workflow.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>Signals / Storage / Query / Alerting / Dashboards / Self-host / Cost / Community</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Prometheus + Grafana + Loki + Jaeger</td>
+<td>OSS metrics/logs/traces</td>
+<td>Multi-tool ops, retention tuning</td>
+<td>Standard stack, self-hosted, broad community</td>
+<td><code>$0 license</code>; infra only</td>
+<td>2-8 vCPU, 8-32 GB RAM + storage</td>
+<td>M</td>
+<td>Apache 2.0 / AGPL for Grafana</td>
+<td>Yes</td>
+<td>All signals with components, PromQL/LogQL</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ELK Stack</td>
+<td>Logs/search/dashboards</td>
+<td>Elastic license, resource-heavy</td>
+<td>Strong logs/search, mature</td>
+<td>Self-managed basic + infra; Elastic Cloud usage</td>
+<td>JVM/storage heavy</td>
+<td>M/H</td>
+<td>Elastic License/SSPL/AGPL options</td>
+<td>Yes self-host</td>
+<td>Logs strong, metrics/traces via integrations</td>
+</tr>
+<tr>
+<td>3</td>
+<td>OpenTelemetry + Tempo + Grafana</td>
+<td>Standard traces/metrics/logs pipeline</td>
+<td>Requires instrumentation discipline</td>
+<td>Vendor-neutral, future-proof</td>
+<td><code>$0 license</code>; infra</td>
+<td>Collector + backend storage</td>
+<td>M</td>
+<td>Apache 2.0 / AGPL</td>
+<td>Yes</td>
+<td>All signals via OTel, good traces</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Datadog</td>
+<td>Full SaaS observability</td>
+<td>Cost growth, SaaS residency</td>
+<td>Fast setup, great UX, broad integrations</td>
+<td>Per host/container/log/APM usage</td>
+<td>Managed agents</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Region/contract-dependent</td>
+<td>All signals, strong alerting</td>
+</tr>
+<tr>
+<td>5</td>
+<td>New Relic</td>
+<td>SaaS observability</td>
+<td>Ingest/user pricing, SaaS</td>
+<td>Unified data platform, good APM</td>
+<td>Usage/user based, free tier</td>
+<td>Managed agents</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Region/contract-dependent</td>
+<td>All signals</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Dynatrace</td>
+<td>Enterprise observability</td>
+<td>Expensive/quote, lock-in</td>
+<td>Strong AIOps, enterprise support</td>
+<td>DPS/quote</td>
+<td>Managed/agents</td>
+<td>M</td>
+<td>Commercial SaaS/self-host options</td>
+<td>Contract-dependent</td>
+<td>All signals, strong automation</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Honeycomb</td>
+<td>Event/tracing observability</td>
+<td>SaaS, less log-storage focus</td>
+<td>Excellent high-cardinality traces</td>
+<td>Events/usage plans</td>
+<td>Managed</td>
+<td>S/M</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Traces/events strong</td>
+</tr>
+<tr>
+<td>8</td>
+<td>SigNoz</td>
+<td>OSS observability on ClickHouse</td>
+<td>ClickHouse ops, younger than Grafana</td>
+<td>Single OSS observability platform</td>
+<td>OSS <code>$0</code>; cloud paid</td>
+<td>ClickHouse + services</td>
+<td>M</td>
+<td>MIT/Apache mix</td>
+<td>Yes self-host</td>
+<td>Logs/metrics/traces</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Grafana Cloud</td>
+<td>Managed Grafana stack</td>
+<td>SaaS residency/cost</td>
+<td>Familiar Grafana without ops</td>
+<td>Free/usage tiers</td>
+<td>Managed agents</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Metrics/logs/traces/profiles</td>
+</tr>
+<tr>
+<td>10</td>
+<td>ClickHouse + Grafana</td>
+<td>Custom logs/metrics analytics</td>
+<td>Build/maintain own schemas</td>
+<td>Very cost-effective high-volume logs</td>
+<td>OSS <code>$0</code>; ClickHouse Cloud credits/usage</td>
+<td>CPU/storage for ClickHouse</td>
+<td>M/H</td>
+<td>Apache 2.0</td>
+<td>Yes self-host</td>
+<td>Logs/events analytics strong</td>
+</tr>
+<tr>
+<td>11</td>
+<td>VictoriaMetrics</td>
+<td>Metrics TSDB</td>
+<td>Logs/traces need other tools</td>
+<td>Simple, efficient Prometheus-compatible metrics</td>
+<td>OSS <code>$0</code>; enterprise/cloud paid</td>
+<td>Low-medium</td>
+<td>S/M</td>
+<td>Apache 2.0 / enterprise</td>
+<td>Yes</td>
+<td>Metrics strong</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Sentry</td>
+<td>Error tracking/performance</td>
+<td>Not full infra observability</td>
+<td>Best app exception workflow</td>
+<td>Free/paid per event/user</td>
+<td>Managed or self-host</td>
+<td>S</td>
+<td>Business Source License / commercial</td>
+<td>Self-host possible</td>
+<td>Errors/performance, not logs TSDB</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>Prometheus + Grafana + Loki</td>
+<td><code>$2k-12k</code></td>
+<td>Self-host pilot with basic dashboards</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>OpenTelemetry + Grafana/Tempo/Loki + Sentry</td>
+<td><code>$5k-30k</code></td>
+<td>Microservices with portable traces and useful app errors</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>Datadog/New Relic/Dynatrace/Honeycomb</td>
+<td><code>$30k-200k+</code></td>
+<td>24/7 operations, enterprise alerting, low ops burden</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Logs only -&gt; OTel</td>
+<td>Add trace IDs and OpenTelemetry SDK/exporter</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Grafana OSS -&gt; Grafana Cloud</td>
+<td>Point remote_write/log export to cloud, keep dashboards as code</td>
+<td>Low</td>
+<td>Low-medium</td>
+</tr>
+<tr>
+<td>SaaS -&gt; self-host</td>
+<td>Export dashboards/alerts where possible, keep OTel as neutral pipeline</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>ELK -&gt; Loki/ClickHouse</td>
+<td>Re-emit logs through collector, preserve <code>run_id</code>/<code>trace_id</code> fields</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Observability Stack — это &quot;панель приборов&quot; для продукта: logs показывают что случилось, metrics — насколько часто и быстро, traces — где именно запрос замедлился или сломался.</li>
+<li>Для проекта это важно, потому что RAG/LLM-ошибки часто выглядят одинаково для пользователя: &quot;ответ плохой&quot;. Observability помогает отделить проблемы retrieval, provider timeout, parser failure, cache miss и неправильный prompt.</li>
+<li>Технически: <code>OpenTelemetry</code> даёт нейтральный формат spans/metrics/logs, <code>Grafana/Loki/Tempo</code> закрывают self-host path, а <code>Sentry</code> удобен для application errors.</li>
+<li>Когда выбирать: минимальный pilot — Prometheus/Grafana/Loki; production pilot — OpenTelemetry + Grafana stack + Sentry; enterprise — Datadog/New Relic/Dynatrace после budget и residency review.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://opentelemetry.io/docs/">OpenTelemetry documentation</a> — vendor-neutral traces, metrics и logs, EN.</li>
+<li><a href="https://grafana.com/docs/loki/latest/">Grafana Loki documentation</a> — self-hosted log aggregation, EN.</li>
+<li><a href="https://docs.sentry.io/">Sentry documentation</a> — error tracking и performance monitoring, EN.</li>
+</ul>
+<hr>
+<h2 id="12-компонент-9-audit-database">12. Компонент 9 - Audit Database</h2>
+<p><strong>Ответственность:</strong> immutable audit events: кто что вызвал, когда, через какую model/provider, prompt/version, retrieval evidence и PII mask hash.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>Write / Query / Compression / Retention / WORM / SQL / Scale / Cost / Compliance</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>PostgreSQL</td>
+<td>Transactional audit + metadata</td>
+<td>Large log analytics can bloat, retention tuning</td>
+<td>Already familiar, ACID, simple WORM via roles/triggers</td>
+<td><code>$0 license</code>; managed/self-host cost</td>
+<td>2-8 vCPU, 8-32 GB RAM</td>
+<td>S/M</td>
+<td>PostgreSQL</td>
+<td>Yes</td>
+<td>Medium write, strong SQL, WORM by design</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ClickHouse</td>
+<td>Append-only analytics/logs</td>
+<td>Needs schema discipline, less OLTP</td>
+<td>Very fast analytics, compression, cheap storage</td>
+<td>OSS <code>$0</code>; Cloud $300 credits/usage</td>
+<td>4-16 vCPU, SSD/object storage</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>High write, fast analytics, TTL</td>
+</tr>
+<tr>
+<td>3</td>
+<td>TimescaleDB</td>
+<td>Time-series on Postgres</td>
+<td>License/compression features review</td>
+<td>Hypertables, retention, SQL</td>
+<td>OSS/community + cloud paid</td>
+<td>Postgres-like</td>
+<td>M</td>
+<td>Timescale license / Apache components</td>
+<td>Yes self-host</td>
+<td>Medium-high write, SQL</td>
+</tr>
+<tr>
+<td>4</td>
+<td>InfluxDB</td>
+<td>Time-series metrics/events</td>
+<td>Less natural relational audit joins</td>
+<td>Fast time-series ingestion, retention</td>
+<td>Cloud usage examples: data in <code>$0.0025/MB</code>, query <code>$0.012/100</code>, storage <code>$0.002/GB-hour</code>, out <code>$0.09/GB</code>; OSS options</td>
+<td>2-8 vCPU</td>
+<td>M</td>
+<td>MIT/Commercial depending version</td>
+<td>Yes self-host</td>
+<td>High write, retention</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Elasticsearch</td>
+<td>Audit log search</td>
+<td>Cost/resource heavy, license</td>
+<td>Powerful text search and Kibana</td>
+<td>Self-managed/cloud pricing</td>
+<td>JVM/storage</td>
+<td>M/H</td>
+<td>Elastic licenses</td>
+<td>Yes self-host</td>
+<td>High write, search strong</td>
+</tr>
+<tr>
+<td>6</td>
+<td>MongoDB</td>
+<td>Document audit events</td>
+<td>Analytics less efficient than columnar</td>
+<td>Flexible schema, easy JSON events</td>
+<td>Community <code>$0</code>; Atlas paid</td>
+<td>2-8 vCPU</td>
+<td>S/M</td>
+<td>SSPL/community/commercial</td>
+<td>Yes self-host if license approved</td>
+<td>Medium write, flexible</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Apache Doris</td>
+<td>OLAP analytics</td>
+<td>Less common locally, ops</td>
+<td>MPP SQL analytics</td>
+<td>OSS <code>$0</code>; cloud paid</td>
+<td>Cluster, 3+ nodes</td>
+<td>H</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>High write/query</td>
+</tr>
+<tr>
+<td>8</td>
+<td>DuckDB</td>
+<td>Embedded analytics</td>
+<td>Not concurrent production DB</td>
+<td>Cheap local reports over parquet</td>
+<td><code>$0 license</code></td>
+<td>Local CPU</td>
+<td>XS/S</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>Small-scale analytics</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Amazon Athena</td>
+<td>Serverless SQL over S3</td>
+<td>AWS lock-in, data lake governance</td>
+<td>No servers, cheap occasional queries</td>
+<td>Per TB scanned</td>
+<td>Managed + S3</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Good analytics, no OLTP</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Google BigQuery</td>
+<td>Serverless data warehouse</td>
+<td>GCP lock-in, cost if bad queries</td>
+<td>Mature analytics, IAM, scale</td>
+<td>On-demand <code>$6.25/TiB</code> scanned after free tier; storage extra</td>
+<td>Managed</td>
+<td>S/M</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Very high scale</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Snowflake</td>
+<td>Data warehouse</td>
+<td>Quote/credit complexity, SaaS</td>
+<td>Enterprise governance, sharing</td>
+<td>Credit/storage usage, quote</td>
+<td>Managed</td>
+<td>M</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>High scale/compliance</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Azure Synapse</td>
+<td>Azure analytics</td>
+<td>Azure lock-in, complexity</td>
+<td>Enterprise data platform</td>
+<td>DWU/serverless usage</td>
+<td>Managed</td>
+<td>M/H</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>High scale</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>PostgreSQL append-only</td>
+<td><code>$1k-8k</code></td>
+<td>Pilot audit, simple SQL reports, minimal infra</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>PostgreSQL metadata + ClickHouse events</td>
+<td><code>$5k-25k</code></td>
+<td>High event volume with fast analytics and local residency</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>ClickHouse Cloud/BigQuery/Snowflake</td>
+<td><code>$30k-200k+</code></td>
+<td>Large analytics, BI, compliance reporting, managed SLA</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>PostgreSQL -&gt; ClickHouse</td>
+<td>CDC or batch copy audit rows, keep Postgres as source of truth first</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>ClickHouse -&gt; BigQuery/Snowflake</td>
+<td>Export parquet to object storage, load partitions by date</td>
+<td>Low-medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Elasticsearch logs -&gt; ClickHouse</td>
+<td>Reindex <code>_source</code> to columnar schema, preserve IDs</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Any -&gt; WORM archive</td>
+<td>Periodic parquet/JSONL signed export to object storage with retention lock</td>
+<td>Low</td>
+<td>Low</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Audit Database — это &quot;журнал доказательств&quot;: кто запустил анализ, какая model/provider ответила, какие chunks попали в prompt, какие PII masks применились и какой результат был экспортирован.</li>
+<li>Для проекта это важно, потому что без audit trail невозможно объяснить спорный ответ, повторить анализ или доказать compliance. Для BA это страховка: результат можно разобрать по шагам, а не воспринимать как чёрный ящик.</li>
+<li>Технически: <code>PostgreSQL</code> удобен для metadata и append-only событий; <code>ClickHouse</code> подходит для большого потока logs/events; WORM archive нужен для долгого хранения и юридически значимых проверок.</li>
+<li>Когда выбирать: <code>PostgreSQL append-only</code> для pilot; <code>PostgreSQL + ClickHouse</code> для high-volume analytics; cloud warehouses — когда есть BI/compliance требования и разрешён managed perimeter.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://www.postgresql.org/docs/current/sql-createtrigger.html">PostgreSQL trigger documentation</a> — один из способов enforce append-only/audit rules, EN.</li>
+<li><a href="https://clickhouse.com/docs/en/intro">ClickHouse introduction</a> — columnar analytics DB для больших событийных таблиц, EN.</li>
+<li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html">Amazon S3 Object Lock</a> — пример WORM-подхода для audit archives, EN.</li>
+</ul>
+<hr>
+<h2 id="13-компонент-10-object-storage">13. Компонент 10 - Object Storage</h2>
+<p><strong>Ответственность:</strong> raw uploaded files, parser artifacts, extracted JSON, reports, snapshots и audit archives.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>S3 API / Cost / Transfer / Durability / Versioning / Lifecycle / Encryption / Managed</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>MinIO</td>
+<td>Self-hosted S3-compatible storage</td>
+<td>Ops/backups/erasure coding, AGPL/commercial implications</td>
+<td>Local S3 API, simple, high performance</td>
+<td>OSS/commercial; infra only</td>
+<td>4+ disks for HA, 4-16 vCPU</td>
+<td>M</td>
+<td>AGPL v3 / commercial</td>
+<td>Yes</td>
+<td>Strong S3, versioning/lifecycle/encryption</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Amazon S3</td>
+<td>Managed object storage</td>
+<td>External cloud, egress, residency</td>
+<td>Mature, durable, lifecycle, object lock</td>
+<td>Standard storage example around <code>$0.023/GB-month</code> in us-east-1 + requests/egress</td>
+<td>Managed</td>
+<td>XS/S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Strongest managed S3</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Yandex Object Storage</td>
+<td>RU cloud S3-compatible</td>
+<td>Provider lock-in, tariff changes</td>
+<td>RU residency path, S3 API</td>
+<td>RUB tariff by storage/requests/traffic</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Yes RU cloud</td>
+<td>S3-compatible, lifecycle/encryption</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Selectel Cloud Storage</td>
+<td>RU provider object storage</td>
+<td>Contract/tariff dependency</td>
+<td>RU residency, S3 API</td>
+<td>Provider tariff</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Yes RU</td>
+<td>S3-compatible</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Ceph</td>
+<td>Self-hosted distributed storage</td>
+<td>High ops complexity</td>
+<td>Enterprise self-host, S3/RBD/CephFS</td>
+<td><code>$0 license</code>; hardware/ops</td>
+<td>3+ storage nodes, disks/network</td>
+<td>H</td>
+<td>LGPL/GPL mix</td>
+<td>Yes</td>
+<td>S3 via RGW, high durability if operated well</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Azure Blob Storage</td>
+<td>Managed object/blob storage</td>
+<td>Azure lock-in, region approval</td>
+<td>Tiers, lifecycle, immutability</td>
+<td>Hot/cool/archive GB-month + operations/egress</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Strong lifecycle/encryption</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Google Cloud Storage</td>
+<td>Managed object storage</td>
+<td>GCP lock-in, egress</td>
+<td>Tiers, IAM, lifecycle</td>
+<td>Standard regional examples around <code>$0.020-0.026/GB-month</code> by region</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Strong lifecycle/encryption</td>
+</tr>
+<tr>
+<td>8</td>
+<td>OpenStack Swift</td>
+<td>Self-hosted object storage</td>
+<td>Ops complexity, smaller modern ecosystem</td>
+<td>Open-source object storage for private cloud</td>
+<td><code>$0 license</code>; infra</td>
+<td>3+ nodes</td>
+<td>H</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>S3-compatible via gateways, native Swift</td>
+</tr>
+<tr>
+<td>9</td>
+<td>SeaweedFS</td>
+<td>Simple distributed file/object store</td>
+<td>Smaller enterprise support</td>
+<td>Lightweight, S3 API, fast</td>
+<td><code>$0 license</code></td>
+<td>3+ nodes for HA</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>S3-compatible, simple ops</td>
+</tr>
+<tr>
+<td>10</td>
+<td>GarageFS</td>
+<td>Lightweight geo-distributed object store</td>
+<td>Younger ecosystem</td>
+<td>Simple self-hosted S3-compatible storage</td>
+<td><code>$0 license</code></td>
+<td>Small nodes possible</td>
+<td>M</td>
+<td>AGPL v3</td>
+<td>Yes</td>
+<td>S3-compatible, versioning limited</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Local filesystem</td>
+<td>Single-node files</td>
+<td>No HA, backup risk, path coupling</td>
+<td>Cheapest and simplest for offline pilot</td>
+<td>Existing disk</td>
+<td>Single server</td>
+<td>XS</td>
+<td>N/A</td>
+<td>Yes</td>
+<td>No S3 unless wrapped</td>
+</tr>
+<tr>
+<td>12</td>
+<td>NFS/SMB share</td>
+<td>Shared filesystem</td>
+<td>Locking/perf/HA issues</td>
+<td>Reuses enterprise NAS</td>
+<td>Existing NAS/license</td>
+<td>NAS/server</td>
+<td>S/M</td>
+<td>N/A</td>
+<td>Yes if on-prem</td>
+<td>No object semantics</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>Local FS or MinIO single node</td>
+<td><code>$0-5k</code></td>
+<td>Offline demo/pilot, manual backups acceptable</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>MinIO HA or RU S3-compatible provider</td>
+<td><code>$5k-30k</code></td>
+<td>Production pilot with RU residency and object API</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>S3/Azure/GCS/Ceph</td>
+<td><code>$20k-150k+</code></td>
+<td>High durability, lifecycle, object lock, enterprise backup</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Local FS -&gt; S3/MinIO</td>
+<td>Introduce object store interface, upload files by content hash, keep path alias</td>
+<td>Low</td>
+<td>Low-medium</td>
+</tr>
+<tr>
+<td>MinIO -&gt; S3/Yandex/Selectel</td>
+<td><code>mc mirror</code>/S3 sync, preserve bucket/key layout</td>
+<td>Low</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Cloud S3 -&gt; self-host</td>
+<td>S3 batch export/sync, verify object hashes and metadata</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>NFS -&gt; object storage</td>
+<td>Convert path references to object keys, update report links</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Object Storage — это место, где лежат исходные файлы, parser artifacts, extracted JSON, screenshots/reports и audit archives. Это не просто папка, а слой с versioning, lifecycle и access control.</li>
+<li>Для проекта это важно, потому что повторяемость анализа зависит от сохранения raw document и всех промежуточных артефактов. Если файл потерян или перезаписан, audit и повторная проверка становятся ненадёжными.</li>
+<li>Технически: <code>MinIO</code> даёт self-hosted S3 API, cloud S3-compatible providers дают managed durability, а local FS годится только для offline pilot с понятным backup-процессом.</li>
+<li>Когда выбирать: local FS — для demo; <code>MinIO</code>/RU S3-compatible storage — для production pilot с residency; <code>S3/Azure/GCS/Ceph</code> — для enterprise lifecycle, immutability и disaster recovery.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://min.io/docs/minio/linux/index.html">MinIO object storage documentation</a> — self-hosted S3-compatible storage, EN.</li>
+<li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html">Amazon S3 User Guide</a> — managed object storage concepts, EN.</li>
+<li><a href="https://yandex.cloud/ru/docs/storage/">Yandex Object Storage documentation</a> — RU cloud S3-compatible option, RU.</li>
+</ul>
+<hr>
+<h2 id="14-компонент-11-cache-layer">14. Компонент 11 - Cache Layer</h2>
+<p><strong>Ответственность:</strong> LLM response cache, retrieval result cache, sessions, rate limits, locks и ephemeral state.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>Throughput / p99 / Persistence / Eviction / Cluster / Memory / PubSub / Redis API</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Redis</td>
+<td>General cache, sessions, queues</td>
+<td>License changes, memory cost</td>
+<td>Standard ecosystem, TTL, pub/sub, streams</td>
+<td>Source available/OSS variants; Redis Cloud paid</td>
+<td>RAM sized to hotset</td>
+<td>S/M</td>
+<td>BSD for older, RSAL/SSPL for newer Redis Ltd; Valkey Apache 2.0 alternative</td>
+<td>Yes if self-host/license approved</td>
+<td>Very high throughput, low p99</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Memcached</td>
+<td>Simple cache</td>
+<td>No persistence/structures</td>
+<td>Extremely simple, fast</td>
+<td><code>$0 license</code></td>
+<td>RAM</td>
+<td>XS/S</td>
+<td>BSD</td>
+<td>Yes</td>
+<td>High throughput, no persistence</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Dragonfly</td>
+<td>Redis-compatible high-performance cache</td>
+<td>Younger than Redis</td>
+<td>Efficient multi-threaded, Redis API</td>
+<td>OSS <code>$0</code>; cloud paid/quote</td>
+<td>RAM, fewer nodes</td>
+<td>S/M</td>
+<td>BSL/Apache terms by version, review</td>
+<td>Yes self-host if license ok</td>
+<td>Very high throughput</td>
+</tr>
+<tr>
+<td>4</td>
+<td>KeyDB</td>
+<td>Redis fork</td>
+<td>Ecosystem uncertainty</td>
+<td>Multi-threaded Redis-compatible</td>
+<td><code>$0 license</code></td>
+<td>RAM</td>
+<td>S/M</td>
+<td>BSD</td>
+<td>Yes</td>
+<td>High throughput</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Redis Cluster</td>
+<td>Sharded Redis</td>
+<td>Cluster ops, client behavior</td>
+<td>Scale hotset, HA</td>
+<td>infra/license</td>
+<td>Multiple RAM nodes</td>
+<td>M</td>
+<td>Redis licensing as above</td>
+<td>Yes</td>
+<td>High throughput/HA</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Hazelcast</td>
+<td>Distributed in-memory data grid</td>
+<td>Java/cluster ops, overkill for simple cache</td>
+<td>Enterprise clustering, compute near data</td>
+<td>OSS + enterprise quote</td>
+<td>RAM cluster</td>
+<td>M/H</td>
+<td>Apache 2.0 core / commercial</td>
+<td>Yes</td>
+<td>High throughput, rich cluster</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Apache Ignite</td>
+<td>In-memory compute/data grid</td>
+<td>Complexity, heavier ops</td>
+<td>SQL, compute grid, persistence</td>
+<td><code>$0 license</code></td>
+<td>RAM/SSD cluster</td>
+<td>H</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>High throughput, complex</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Aerospike</td>
+<td>Low-latency KV</td>
+<td>Commercial for enterprise features</td>
+<td>Very high scale, SSD/RAM hybrid</td>
+<td>Community/enterprise quote</td>
+<td>RAM+SSD nodes</td>
+<td>H</td>
+<td>AGPL/commercial</td>
+<td>Yes if license accepted</td>
+<td>Very high throughput</td>
+</tr>
+<tr>
+<td>9</td>
+<td>etcd</td>
+<td>Coordination KV</td>
+<td>Not for high-volume cache</td>
+<td>Strong consistency, locks/config</td>
+<td><code>$0 license</code></td>
+<td>3 small nodes</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>Low throughput cache, strong consistency</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Consul KV</td>
+<td>Service discovery/config KV</td>
+<td>Not hot cache</td>
+<td>Service discovery + KV</td>
+<td>OSS/enterprise</td>
+<td>3 nodes</td>
+<td>M</td>
+<td>BUSL/commercial changes, review</td>
+<td>Yes if license approved</td>
+<td>Moderate KV</td>
+</tr>
+<tr>
+<td>11</td>
+<td>In-memory local cache</td>
+<td>Per-process LRU/TTL</td>
+<td>No sharing, cold restarts</td>
+<td>Zero infra, fastest</td>
+<td><code>$0</code></td>
+<td>App memory</td>
+<td>XS</td>
+<td>N/A</td>
+<td>Yes</td>
+<td>Very low latency, no persistence</td>
+</tr>
+<tr>
+<td>12</td>
+<td>CDN cache (Cloudflare)</td>
+<td>Edge HTTP cache</td>
+<td>External, not private LLM cache</td>
+<td>Great static/API edge cache</td>
+<td>Free/paid tiers</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>HTTP cache/rate limits</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>local cache + Memcached/Valkey</td>
+<td><code>$0-3k</code></td>
+<td>Single-node pilot, low operational overhead</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>Redis/Valkey or Dragonfly</td>
+<td><code>$3k-20k</code></td>
+<td>Shared sessions, LLM cache, rate limits</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>Redis Cluster/Cloud, Hazelcast, Aerospike</td>
+<td><code>$20k-120k+</code></td>
+<td>HA, multi-tenant cache, very high throughput</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Local cache -&gt; Redis/Valkey</td>
+<td>Add cache interface and TTL policy, accept cold start</td>
+<td>None</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Redis -&gt; Dragonfly/KeyDB/Valkey</td>
+<td>Verify command compatibility, run shadow traffic</td>
+<td>Low</td>
+<td>Low-medium</td>
+</tr>
+<tr>
+<td>Redis single -&gt; cluster</td>
+<td>Add key hash tags and cluster-aware client</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Cache provider switch</td>
+<td>Cache is disposable; preserve only session/auth if used</td>
+<td>Low</td>
+<td>Low</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Cache Layer — это временная память продукта: он хранит повторяемые LLM responses, retrieval results, sessions, rate-limit counters и locks, чтобы не считать одно и то же заново.</li>
+<li>Для проекта это важно, потому что LLM/API calls стоят денег и времени. Правильный cache ускоряет повторные сценарии БА, снижает нагрузку и помогает пережить provider rate limits.</li>
+<li>Технически: in-process cache почти бесплатен, но не работает между сервисами; <code>Redis</code>/<code>Valkey</code> дают shared TTL storage; <code>Dragonfly</code>/<code>KeyDB</code> могут уменьшить latency и ops-cost при Redis-compatible API.</li>
+<li>Когда выбирать: local cache для single-node demo; <code>Valkey/Redis</code> для pilot с shared sessions; cluster/cloud cache — для HA, multi-tenant и high-throughput.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://redis.io/solutions/caching/">Redis caching patterns</a> — типовые cache use cases, EN.</li>
+<li><a href="https://valkey.io/docs/">Valkey documentation</a> — Redis-compatible open source cache, EN.</li>
+<li><a href="https://www.dragonflydb.io/docs">Dragonfly documentation</a> — Redis-compatible high-performance datastore, EN.</li>
+</ul>
+<hr>
+<h2 id="15-компонент-12-api-gateway">15. Компонент 12 - API Gateway</h2>
+<p><strong>Ответственность:</strong> ingress, routing, auth, rate limiting, request transforms, OpenAPI и WebSocket/gRPC edge.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>RPS / Auth / Rate limit / Transform / Circuit breaker / Discovery / WS / gRPC / OpenAPI</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>FastAPI</td>
+<td>App API + lightweight gateway</td>
+<td>Not full gateway alone</td>
+<td>Already Python, OpenAPI built-in, fast</td>
+<td><code>$0 license</code></td>
+<td>App server</td>
+<td>S</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>Good RPS, JWT/OAuth libs, OpenAPI</td>
+</tr>
+<tr>
+<td>2</td>
+<td>NGINX + Lua</td>
+<td>Reverse proxy/gateway</td>
+<td>Lua/plugin maintenance</td>
+<td>Mature, fast, simple edge</td>
+<td>OSS <code>$0</code>; NGINX Plus paid</td>
+<td>1-2 vCPU</td>
+<td>S/M</td>
+<td>BSD-like / commercial Plus</td>
+<td>Yes</td>
+<td>High RPS, rate limit, TLS</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Kong Gateway</td>
+<td>API gateway/plugins</td>
+<td>DB/plugin ops, enterprise features paid</td>
+<td>Mature plugins, auth/rate limit, hybrid mode</td>
+<td>OSS + Enterprise quote/cloud</td>
+<td>2-4 vCPU + DB</td>
+<td>M</td>
+<td>Apache 2.0 core / commercial</td>
+<td>Yes self-host</td>
+<td>Strong gateway features</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Traefik</td>
+<td>Cloud-native ingress</td>
+<td>Less enterprise API governance than Kong</td>
+<td>Simple Docker/K8s routing, auto TLS</td>
+<td>OSS + Enterprise</td>
+<td>1-2 vCPU</td>
+<td>S</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>Good routing, middleware</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Envoy Proxy</td>
+<td>L7 proxy/service mesh building block</td>
+<td>Config complexity</td>
+<td>High performance, gRPC, xDS</td>
+<td><code>$0 license</code></td>
+<td>1-4 vCPU</td>
+<td>M/H</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>Strong gRPC/circuit breaker</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Apache APISIX</td>
+<td>API gateway on NGINX/OpenResty</td>
+<td>Plugin/control-plane ops</td>
+<td>High performance, dynamic config</td>
+<td><code>$0 license</code>; enterprise/cloud paid</td>
+<td>2-4 vCPU + etcd</td>
+<td>M</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>Strong auth/rate/plugins</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Tyk</td>
+<td>API management</td>
+<td>Commercial features, ops</td>
+<td>Strong API management and portal</td>
+<td>OSS gateway + paid dashboard/cloud</td>
+<td>2-4 vCPU + DB</td>
+<td>M</td>
+<td>MPL/commercial</td>
+<td>Yes self-host</td>
+<td>Strong management</td>
+</tr>
+<tr>
+<td>8</td>
+<td>AWS API Gateway</td>
+<td>Managed API gateway</td>
+<td>AWS lock-in, latency/cost</td>
+<td>No ops, auth/throttling, Lambda integration</td>
+<td>HTTP API example <code>$1.00/M requests</code>; REST API example <code>$3.50/M</code> first tier, plus data/cache/private link</td>
+<td>Managed</td>
+<td>XS/S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Strong managed features</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Cloudflare Workers</td>
+<td>Edge gateway/functions</td>
+<td>External edge/data path</td>
+<td>Global edge, WAF, rate limits</td>
+<td>Free 100k requests/day; Standard includes 10M/month, then <code>$0.30/M</code> requests and <code>$0.02/M</code> CPU-ms</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Global, not local</td>
+<td>Edge scale</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Express.js</td>
+<td>Node API gateway</td>
+<td>Another stack, less type safety</td>
+<td>Simple JS ecosystem</td>
+<td><code>$0 license</code></td>
+<td>App server</td>
+<td>S</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>Good for JS teams</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Go Fiber/Gin</td>
+<td>High-performance API</td>
+<td>Go stack required</td>
+<td>Very high RPS, low memory</td>
+<td><code>$0 license</code></td>
+<td>App server</td>
+<td>M</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>High RPS</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Spring Cloud Gateway</td>
+<td>JVM enterprise gateway</td>
+<td>JVM ops/heavy for Python project</td>
+<td>Strong enterprise Java ecosystem</td>
+<td><code>$0 license</code></td>
+<td>JVM server</td>
+<td>M/H</td>
+<td>Apache 2.0</td>
+<td>Yes</td>
+<td>Good enterprise integration</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>FastAPI + NGINX</td>
+<td><code>$0-5k</code></td>
+<td>Current Python stack, simple auth/routing</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>Kong/APISIX or Envoy</td>
+<td><code>$5k-30k</code></td>
+<td>Multiple services, rate limits, auth, route governance</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>Kong Enterprise/Tyk/AWS API Gateway/Cloudflare</td>
+<td><code>$30k-150k+</code></td>
+<td>Developer portal, WAF, global edge, enterprise support</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>FastAPI only -&gt; NGINX/Kong</td>
+<td>Put gateway in front, keep app routes unchanged</td>
+<td>Low</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>NGINX -&gt; Kong/APISIX</td>
+<td>Translate routes/rate limits, migrate auth plugins</td>
+<td>Low-medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Self-host gateway -&gt; cloud gateway</td>
+<td>Preserve OpenAPI, DNS cutover, staged traffic</td>
+<td>Low</td>
+<td>Medium compliance</td>
+</tr>
+<tr>
+<td>REST -&gt; gRPC/internal</td>
+<td>Keep REST external, introduce internal gRPC gradually</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>API Gateway — это единая входная дверь в систему: он принимает внешние запросы, проверяет auth, применяет rate limits и маршрутизирует вызовы в нужный сервис.</li>
+<li>Для проекта это важно, потому что при переходе от monolith к services пользователю не нужно знать, где ingestion, retrieval или generation. Gateway сохраняет стабильный внешний API и снижает риск хаотичного доступа к внутренним сервисам.</li>
+<li>Технически: <code>FastAPI + NGINX</code> закрывают простой старт; <code>Kong</code>, <code>APISIX</code> или <code>Envoy</code> дают plugins, service discovery, circuit breakers и централизованную route governance.</li>
+<li>Когда выбирать: FastAPI/NGINX — для бюджета и текущего Python stack; Kong/APISIX/Envoy — когда сервисов становится несколько; enterprise gateway — когда нужны portal, WAF, SLA и paid support.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://fastapi.tiangolo.com/deployment/concepts/">FastAPI deployment concepts</a> — как запускать Python API за proxy/server, EN.</li>
+<li><a href="https://docs.nginx.com/nginx/admin-guide/security-controls/controlling-access-proxied-http/">NGINX rate limiting</a> — access control и rate limiting на edge, EN.</li>
+<li><a href="https://docs.konghq.com/gateway/">Kong Gateway documentation</a> — API gateway plugins, routing и auth, EN.</li>
+</ul>
+<hr>
+<h2 id="16-компонент-13-pii-masking-data-anonymization">16. Компонент 13 - PII Masking / Data Anonymization</h2>
+<p><strong>Ответственность:</strong> находить и маскировать PII перед external calls/logging, поддерживать RU-specific identifiers и reversible/irreversible tokenization, где это нужно.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>№</th>
+<th>Решение</th>
+<th>Что решает</th>
+<th>Риски</th>
+<th>Преимущества</th>
+<th>Стоимость</th>
+<th>Ресурсы</th>
+<th>Трудоемкость</th>
+<th>Лицензия</th>
+<th>RU-резидентность</th>
+<th>RU PII / Accuracy / Latency / Custom patterns / Self-host / Cost / Reversible / Compliance</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Custom regex-based</td>
+<td>Known patterns: email, phone, IP, INN/SNILS/passport</td>
+<td>False positives/negatives, maintenance</td>
+<td>Deterministic, auditable, current BL-23 style</td>
+<td><code>$0</code></td>
+<td>CPU</td>
+<td>S</td>
+<td>Project code</td>
+<td>Yes</td>
+<td>Strong for exact RU patterns, weak semantic</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Microsoft Presidio</td>
+<td>PII detection/anonymization framework</td>
+<td>RU recognizers must be custom</td>
+<td>Self-host, extensible recognizers, anonymizers</td>
+<td><code>$0 license</code></td>
+<td>CPU, optional NLP models</td>
+<td>M</td>
+<td>MIT</td>
+<td>Yes</td>
+<td>Good custom patterns, reversible tokenization possible</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Amazon Comprehend PII</td>
+<td>Managed PII detection</td>
+<td>External cloud, RU support limitations</td>
+<td>No ops, mature API</td>
+<td>Per unit/character/request pricing</td>
+<td>Managed</td>
+<td>S</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Good EN, RU must verify</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Google Cloud Sensitive Data Protection (DLP)</td>
+<td>DLP inspection/de-identification</td>
+<td>External cloud, cost, data transfer</td>
+<td>Broad detectors, de-identification, templates</td>
+<td>Usage-based by bytes/requests</td>
+<td>Managed</td>
+<td>S/M</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Strong generic DLP, custom infoTypes</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Azure AI Language PII / Purview</td>
+<td>PII detection/governance</td>
+<td>Azure lock-in, language support must be tested</td>
+<td>Enterprise compliance stack</td>
+<td>Usage-based/quote</td>
+<td>Managed</td>
+<td>S/M</td>
+<td>Commercial SaaS</td>
+<td>Region-dependent</td>
+<td>Good enterprise governance</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Nightfall AI</td>
+<td>SaaS DLP/PII</td>
+<td>Quote/SaaS, data residency</td>
+<td>Strong DLP workflows, SaaS integrations</td>
+<td>Quote</td>
+<td>Managed</td>
+<td>S/M</td>
+<td>Commercial SaaS</td>
+<td>Contract-dependent</td>
+<td>Broad DLP, custom detectors</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Privacera</td>
+<td>Data governance/access control</td>
+<td>Heavy enterprise platform</td>
+<td>Policy governance across data estate</td>
+<td>Quote</td>
+<td>Managed/self-host options</td>
+<td>H</td>
+<td>Commercial</td>
+<td>Contract-dependent</td>
+<td>Compliance/governance strong</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Immuta</td>
+<td>Data access governance</td>
+<td>Overkill for simple masking</td>
+<td>Dynamic data policies, governance</td>
+<td>Quote</td>
+<td>Managed/self-host options</td>
+<td>H</td>
+<td>Commercial</td>
+<td>Contract-dependent</td>
+<td>Governance strong</td>
+</tr>
+<tr>
+<td>9</td>
+<td>TokenEx</td>
+<td>Tokenization</td>
+<td>Commercial dependency, integration</td>
+<td>PCI/tokenization expertise</td>
+<td>Quote</td>
+<td>Managed</td>
+<td>M</td>
+<td>Commercial SaaS</td>
+<td>Contract-dependent</td>
+<td>Reversible tokenization strong</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Delphix</td>
+<td>Data masking for databases</td>
+<td>Heavy enterprise suite</td>
+<td>Non-prod data masking, enterprise workflows</td>
+<td>Quote</td>
+<td>Managed/self-host</td>
+<td>H</td>
+<td>Commercial</td>
+<td>Contract-dependent</td>
+<td>Batch masking strong</td>
+</tr>
+<tr>
+<td>11</td>
+<td>IRI FieldShield</td>
+<td>Data masking/anonymization</td>
+<td>Commercial tooling</td>
+<td>Broad masking formats, on-prem</td>
+<td>Quote</td>
+<td>Self-host</td>
+<td>M/H</td>
+<td>Commercial</td>
+<td>Yes if deployed on-prem</td>
+<td>Strong batch masking</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Syntho</td>
+<td>Synthetic data</td>
+<td>Not request-time masking</td>
+<td>Synthetic datasets for test/dev</td>
+<td>Quote</td>
+<td>SaaS/self-host options</td>
+<td>M/H</td>
+<td>Commercial</td>
+<td>Contract-dependent</td>
+<td>Synthetic data, privacy testing</td>
+</tr>
+</tbody></table></div>
+<p><strong>Рекомендации</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Tier</th>
+<th>Решение</th>
+<th>Year-1 TCO estimate</th>
+<th>Когда применять</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Budget</td>
+<td>Custom regex + tests</td>
+<td><code>$0-5k</code></td>
+<td>Known deterministic patterns, MVP logs and RAG context</td>
+</tr>
+<tr>
+<td>Optimal</td>
+<td>Presidio + custom RU recognizers + token vault</td>
+<td><code>$5k-25k</code></td>
+<td>Local PII Gateway before every external LLM/API call</td>
+</tr>
+<tr>
+<td>Enterprise</td>
+<td>Google/Azure/AWS DLP or Nightfall/Immuta/Privacera</td>
+<td><code>$30k-250k+</code></td>
+<td>Enterprise compliance, broad data estate, audit workflows</td>
+</tr>
+</tbody></table></div>
+<p><strong>Пути миграции</strong></p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>From -&gt; To</th>
+<th>Path</th>
+<th>Downtime</th>
+<th>Risk</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Regex -&gt; Presidio</td>
+<td>Convert regexes to recognizers, preserve mask token format</td>
+<td>Low</td>
+<td>Low-medium</td>
+</tr>
+<tr>
+<td>Presidio -&gt; cloud DLP</td>
+<td>Add provider adapter, route only approved data classes</td>
+<td>Low</td>
+<td>Compliance high</td>
+</tr>
+<tr>
+<td>Irreversible mask -&gt; tokenization</td>
+<td>Introduce token vault and key management; old masks cannot be reversed</td>
+<td>Medium</td>
+<td>High</td>
+</tr>
+<tr>
+<td>SaaS DLP -&gt; local</td>
+<td>Export detector config where possible, recreate custom recognizers</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>PII Masking / Data Anonymization — это слой, который находит персональные данные и заменяет их безопасными mask tokens до внешних API calls, logs и analytics.</li>
+<li>Для проекта это важно, потому что даже один неочищенный prompt может нарушить compliance и доверие заказчика. Для BA это означает: можно анализировать реальные документы, но чувствительные поля не должны утекать в provider logs.</li>
+<li>Технически: custom regex хорошо ловит известные RU patterns (<code>email</code>, <code>phone</code>, <code>INN</code>, <code>SNILS</code>), <code>Presidio</code> добавляет recognizer framework, а cloud DLP подходит только после explicit approval и routing по data classes.</li>
+<li>Когда выбирать: regex + tests для MVP; <code>Presidio + custom RU recognizers</code> для local PII Gateway; enterprise DLP/tokenization — когда нужны broader detectors, governance и reversible tokens.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://microsoft.github.io/presidio/">Microsoft Presidio documentation</a> — self-hosted PII detection/anonymization framework, EN.</li>
+<li><a href="https://cloud.google.com/sensitive-data-protection/docs/deidentify-sensitive-data">Google Sensitive Data Protection de-identification</a> — managed DLP patterns, EN.</li>
+<li><a href="https://learn.microsoft.com/en-us/azure/ai-services/language-service/personally-identifiable-information/overview">Azure AI Language PII detection</a> — managed PII detection concepts, EN.</li>
+</ul>
+<hr>
+<h2 id="17-рекомендации-на-уровне-архитектуры">17. Рекомендации на уровне архитектуры</h2>
+<h3 id="171-budget-stack-минимальная-стоимость">17.1. Budget stack - минимальная стоимость</h3>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Component</th>
+<th>Choice</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Search</td>
+<td>pgvector or ChromaDB</td>
+</tr>
+<tr>
+<td>Bus</td>
+<td>RabbitMQ</td>
+</tr>
+<tr>
+<td>Orchestration</td>
+<td>LiteLLM + Instructor + existing prompts</td>
+</tr>
+<tr>
+<td>Parsing</td>
+<td>python-docx/openpyxl + PyMuPDF/pdfplumber</td>
+</tr>
+<tr>
+<td>Embeddings</td>
+<td>bge-m3 local</td>
+</tr>
+<tr>
+<td>LLM serving</td>
+<td>Ollama / llama.cpp</td>
+</tr>
+<tr>
+<td>Rerank</td>
+<td>FlashRank or none</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>Prometheus + Grafana + Loki minimal</td>
+</tr>
+<tr>
+<td>Audit</td>
+<td>PostgreSQL append-only</td>
+</tr>
+<tr>
+<td>Object storage</td>
+<td>Local FS or MinIO single node</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>local cache + Valkey/Redis</td>
+</tr>
+<tr>
+<td>API gateway</td>
+<td>FastAPI + NGINX</td>
+</tr>
+<tr>
+<td>PII</td>
+<td>custom regex</td>
+</tr>
+</tbody></table></div>
+<p><strong>TCO Year 1:</strong> roughly <code>$10k-40k</code> mostly labor + small infra.</p>
+<p><strong>When:</strong> offline pilot, one environment, no strict HA, maximum RU-residency.</p>
+<h3 id="172-optimal-stack-balanced-production-pilot">17.2. Optimal stack - balanced production pilot</h3>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Component</th>
+<th>Choice</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Search</td>
+<td>Qdrant or OpenSearch</td>
+</tr>
+<tr>
+<td>Bus</td>
+<td>NATS JetStream</td>
+</tr>
+<tr>
+<td>Orchestration</td>
+<td>LlamaIndex/Haystack + LiteLLM</td>
+</tr>
+<tr>
+<td>Parsing</td>
+<td>Docling + Unstructured + current structural parser contract</td>
+</tr>
+<tr>
+<td>Embeddings</td>
+<td>bge-m3 + multilingual-e5/Jina benchmark</td>
+</tr>
+<tr>
+<td>LLM serving</td>
+<td>vLLM</td>
+</tr>
+<tr>
+<td>Rerank</td>
+<td>bge-reranker-base/large</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>OpenTelemetry + Grafana stack + Sentry</td>
+</tr>
+<tr>
+<td>Audit</td>
+<td>PostgreSQL + ClickHouse</td>
+</tr>
+<tr>
+<td>Object storage</td>
+<td>MinIO HA or RU S3-compatible provider</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>Valkey/Redis or Dragonfly</td>
+</tr>
+<tr>
+<td>API gateway</td>
+<td>Kong/APISIX/Envoy</td>
+</tr>
+<tr>
+<td>PII</td>
+<td>Presidio + RU recognizers</td>
+</tr>
+</tbody></table></div>
+<p><strong>TCO Year 1:</strong> roughly <code>$60k-180k</code> including infra, DevOps, and validation.</p>
+<p><strong>When:</strong> Sprint 6/7 production pilot with replaceable components and local PII path.</p>
+<h3 id="173-enterprise-stack-maximum-sla-and-governance">17.3. Enterprise stack - maximum SLA and governance</h3>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Component</th>
+<th>Choice</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Search</td>
+<td>Elasticsearch / OpenSearch managed / Vespa / Pinecone if approved</td>
+</tr>
+<tr>
+<td>Bus</td>
+<td>Kafka / Pulsar / managed cloud bus</td>
+</tr>
+<tr>
+<td>Orchestration</td>
+<td>LangGraph + LangSmith/Portkey/Braintrust</td>
+</tr>
+<tr>
+<td>Parsing</td>
+<td>Azure DI / Textract / Document AI / LlamaParse with local fallback</td>
+</tr>
+<tr>
+<td>Embeddings</td>
+<td>OpenAI/Cohere/Voyage/RU provider + local fallback</td>
+</tr>
+<tr>
+<td>LLM serving</td>
+<td>TensorRT-LLM + KServe/BentoML</td>
+</tr>
+<tr>
+<td>Rerank</td>
+<td>Cohere/Jina/Voyage API or ColBERT</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>Datadog/New Relic/Dynatrace/Honeycomb</td>
+</tr>
+<tr>
+<td>Audit</td>
+<td>ClickHouse Cloud / BigQuery / Snowflake</td>
+</tr>
+<tr>
+<td>Object storage</td>
+<td>S3/Azure/GCS/Ceph with object lock</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>Redis Cluster/Cloud, Hazelcast, Aerospike</td>
+</tr>
+<tr>
+<td>API gateway</td>
+<td>Kong Enterprise/Tyk/AWS API Gateway/Cloudflare</td>
+</tr>
+<tr>
+<td>PII</td>
+<td>Enterprise DLP + tokenization vault</td>
+</tr>
+</tbody></table></div>
+<p><strong>TCO Year 1:</strong> <code>$250k+</code> and contract work.</p>
+<p><strong>When:</strong> multi-tenant production, strict SLA, dedicated Infra/SRE, approved cloud/SaaS perimeter.</p>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Три architecture stacks — это не &quot;три разных продукта&quot;, а три уровня зрелости: дешёвый offline/pilot, сбалансированный production pilot и enterprise stack с SLA/governance.</li>
+<li>Для проекта это важно, потому что бизнес-решение о стеке должно учитывать не только цену лицензии, но и людей, инфраструктуру, compliance, migration cost и скорость проверки гипотезы.</li>
+<li>Технически: каждый компонент должен иметь provider interface и migration path, чтобы Sprint 6 мог начать с replaceable defaults, а не с необратимой привязки к Elasticsearch, SaaS LLM или GPU platform.</li>
+<li>Когда выбирать: Budget stack — для проверки ценности; Optimal stack — для Sprint 6/7 pilot с несколькими БА; Enterprise stack — после подтверждённой нагрузки, SLA и выделенного Infra/SRE.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://martinfowler.com/bliki/StranglerFigApplication.html">Strangler Fig Application</a> — подход к постепенной миграции без Big Bang rewrite, EN.</li>
+<li><a href="https://opentelemetry.io/docs/">OpenTelemetry documentation</a> — нейтральный observability layer для заменяемых компонентов, EN.</li>
+<li><a href="https://www.nist.gov/itl/ai-risk-management-framework">NIST AI Risk Management Framework</a> — рамка управления AI-рисками на уровне организации, EN.</li>
+</ul>
+<hr>
+<h2 id="18-реестр-рисков">18. Реестр рисков</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>ID</th>
+<th>Risk</th>
+<th>Probability</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>BL61-R01</td>
+<td>Prices change after research publication</td>
+<td>High</td>
+<td>Medium</td>
+<td>Store access date, require vendor calculator before purchase</td>
+</tr>
+<tr>
+<td>BL61-R02</td>
+<td>SaaS rejected by security/compliance</td>
+<td>Medium</td>
+<td>High</td>
+<td>Keep local/self-host option for every PII-relevant component</td>
+</tr>
+<tr>
+<td>BL61-R03</td>
+<td>Cheapest pilot stack cannot scale</td>
+<td>Medium</td>
+<td>High</td>
+<td>Define migration path and dual-write/dual-index from day one</td>
+</tr>
+<tr>
+<td>BL61-R04</td>
+<td>AGPL/SSPL/Elastic license conflict</td>
+<td>Medium</td>
+<td>High</td>
+<td>Legal review before adopting MinIO/Garage/PyMuPDF/Elastic variants</td>
+</tr>
+<tr>
+<td>BL61-R05</td>
+<td>GPU not provided</td>
+<td>Medium</td>
+<td>High</td>
+<td>CPU-capable fallback: bge-m3 CPU, Ollama/llama.cpp, MiniLM/FlashRank</td>
+</tr>
+<tr>
+<td>BL61-R06</td>
+<td>Elasticsearch unavailable despite BL-60 assumption</td>
+<td>Medium</td>
+<td>High</td>
+<td>Validate Qdrant/OpenSearch/pgvector path in PoC</td>
+</tr>
+<tr>
+<td>BL61-R07</td>
+<td>Overengineering microservices too early</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Start with interfaces and worker split, not full platform rewrite</td>
+</tr>
+<tr>
+<td>BL61-R08</td>
+<td>Audit/log costs grow unexpectedly</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Retention tiers, compression, object archive, sampling for debug logs</td>
+</tr>
+<tr>
+<td>BL61-R09</td>
+<td>Parser SaaS leaks sensitive documents</td>
+<td>Low/Medium</td>
+<td>High</td>
+<td>Local-first parsing; route only approved sanitized samples to SaaS</td>
+</tr>
+<tr>
+<td>BL61-R10</td>
+<td>Migration requires full re-embedding</td>
+<td>High</td>
+<td>Medium</td>
+<td>Preserve raw chunks, embedding model version, text hash, batch jobs</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Risk Register переводит технические неопределённости в управляемые бизнес-риски: цена может измениться, SaaS могут запретить, GPU могут не дать, а самая дешёвая пилотная технология может плохо масштабироваться.</li>
+<li>Для проекта это важно, потому что эти риски нужно закрывать решениями до разработки: approval gates, local fallbacks, migration paths, legal review лицензий и clear rollback.</li>
+<li>Технически: каждый high-impact risk должен иметь owner, signal и mitigation в backlog/ADR, иначе он останется &quot;известной проблемой&quot; без контроля.</li>
+<li>Когда использовать: перед Sprint 6 planning, перед закупкой/approval SaaS, перед выбором embedding model и перед переводом PoC в production pilot.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://www.nist.gov/itl/ai-risk-management-framework">NIST AI Risk Management Framework</a> — системный подход к AI risk governance, EN.</li>
+<li><a href="https://owasp.org/www-project-top-10-for-large-language-model-applications/">OWASP Top 10 for LLM Applications</a> — практические risks для LLM/RAG систем, EN.</li>
+</ul>
+<hr>
+<h2 id="19-decision-checklist-для-sprint-6">19. Decision Checklist для Sprint 6</h2>
+<ul>
+<li>[ ] Choose <strong>one primary</strong> and <strong>one fallback</strong> for search: <code>Qdrant/OpenSearch/Elasticsearch/pgvector</code>.</li>
+<li>[ ] Decide whether <code>Elasticsearch</code> is actually available in customer infrastructure.</li>
+<li>[ ] Choose bus default: <code>NATS JetStream</code> unless team already operates RabbitMQ/Kafka.</li>
+<li>[ ] Approve local parser stack: <code>Docling + Unstructured + current structural parser</code>.</li>
+<li>[ ] Approve default embedding model and dimensions; avoid reindexing surprises.</li>
+<li>[ ] Decide GPU availability and serving target: <code>Ollama</code> for install simplicity or <code>vLLM</code> for production pilot.</li>
+<li>[ ] Define PII Gateway contract and make it mandatory before external API calls.</li>
+<li>[ ] Add <code>run_id</code>, <code>trace_id</code>, <code>provider</code>, <code>model</code>, <code>prompt_id</code>, <code>embedding_model</code>, <code>mask_hash</code> to audit schema.</li>
+<li>[ ] Require vendor legal/security review for every SaaS and non-permissive license.</li>
+<li>[ ] Before implementation BLs, create ADR-010: Microservices decomposition and provider abstraction.</li>
+</ul>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Decision Checklist — это список решений, которые нельзя оставлять &quot;на потом&quot;, потому что от них зависят budget, compliance, latency и план работ команды.</li>
+<li>Для проекта это важно, потому что Sprint 6 должен начинаться не с разработки всех компонентов сразу, а с выбора primary/fallback options и clear contracts: search, bus, parsing, embeddings, serving, PII Gateway и audit fields.</li>
+<li>Технически: checklist должен быть входом в ADR-010 и новые BL-задачи, где у каждого решения есть acceptance criteria, rollout и rollback.</li>
+<li>Когда использовать: на Sprint planning и stage-gate review с PO/Tech Lead/Infra, чтобы зафиксировать, что все vendor/security вопросы видимы до implementation.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://spec.openapis.org/oas/latest.html">OpenAPI Specification</a> — как фиксировать API contracts между сервисами, EN.</li>
+<li><a href="https://adr.github.io/">Architecture Decision Records</a> — lightweight формат для фиксации архитектурных решений, EN.</li>
+<li><a href="https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects">GitHub Docs: About projects</a> — tracking decisions и backlog work items, EN.</li>
+</ul>
+<hr>
+<h2 id="20-реестр-источников">20. Реестр источников</h2>
+<p>Access date for all links: <strong>2026-05-21</strong> unless page notes a later pricing effective date.</p>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Area</th>
+<th>Source</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Elastic</td>
+<td>https://www.elastic.co/pricing</td>
+</tr>
+<tr>
+<td>OpenSearch</td>
+<td>https://aws.amazon.com/opensearch-service/pricing/</td>
+</tr>
+<tr>
+<td>Pinecone</td>
+<td>https://www.pinecone.io/pricing/ and https://docs.pinecone.io/guides/manage-cost/understanding-cost</td>
+</tr>
+<tr>
+<td>Qdrant</td>
+<td>https://qdrant.tech/pricing/</td>
+</tr>
+<tr>
+<td>Weaviate</td>
+<td>https://weaviate.io/pricing</td>
+</tr>
+<tr>
+<td>Milvus/Zilliz</td>
+<td>https://zilliz.com/pricing</td>
+</tr>
+<tr>
+<td>Vespa</td>
+<td>https://vespa.ai/ and https://cloud.vespa.ai/</td>
+</tr>
+<tr>
+<td>AWS SQS/SNS</td>
+<td>https://aws.amazon.com/sqs/pricing/ and https://aws.amazon.com/sns/pricing/</td>
+</tr>
+<tr>
+<td>Google Pub/Sub</td>
+<td>https://cloud.google.com/pubsub/pricing</td>
+</tr>
+<tr>
+<td>Azure Service Bus</td>
+<td>https://azure.microsoft.com/pricing/details/service-bus/</td>
+</tr>
+<tr>
+<td>Confluent</td>
+<td>https://www.confluent.io/pricing</td>
+</tr>
+<tr>
+<td>CloudAMQP</td>
+<td>https://www.cloudamqp.com/plans.html</td>
+</tr>
+<tr>
+<td>StreamNative</td>
+<td>https://streamnative.io/pricing</td>
+</tr>
+<tr>
+<td>LangChain/LangSmith</td>
+<td>https://www.langchain.com/pricing and https://python.langchain.com/</td>
+</tr>
+<tr>
+<td>LlamaIndex/LlamaParse</td>
+<td>https://www.llamaindex.ai/pricing and https://cloud.llamaindex.ai/</td>
+</tr>
+<tr>
+<td>Haystack/deepset</td>
+<td>https://haystack.deepset.ai/ and https://www.deepset.ai/deepset-cloud</td>
+</tr>
+<tr>
+<td>LiteLLM</td>
+<td>https://www.litellm.ai/</td>
+</tr>
+<tr>
+<td>Portkey</td>
+<td>https://portkey.ai/pricing</td>
+</tr>
+<tr>
+<td>Helicone</td>
+<td>https://www.helicone.ai/pricing</td>
+</tr>
+<tr>
+<td>Braintrust</td>
+<td>https://www.braintrust.dev/pricing</td>
+</tr>
+<tr>
+<td>Unstructured</td>
+<td>https://unstructured.io/pricing and https://github.com/Unstructured-IO/unstructured</td>
+</tr>
+<tr>
+<td>Docling</td>
+<td>https://github.com/docling-project/docling</td>
+</tr>
+<tr>
+<td>Azure Document Intelligence</td>
+<td>https://azure.microsoft.com/pricing/details/ai-document-intelligence/</td>
+</tr>
+<tr>
+<td>Google Document AI</td>
+<td>https://cloud.google.com/document-ai/pricing</td>
+</tr>
+<tr>
+<td>Amazon Textract</td>
+<td>https://aws.amazon.com/textract/pricing/</td>
+</tr>
+<tr>
+<td>OpenAI embeddings</td>
+<td>https://platform.openai.com/docs/pricing and https://platform.openai.com/docs/models/text-embedding-3-large</td>
+</tr>
+<tr>
+<td>Cohere</td>
+<td>https://cohere.com/pricing and https://docs.cohere.com/docs/rerank</td>
+</tr>
+<tr>
+<td>Voyage AI</td>
+<td>https://www.voyageai.com/pricing</td>
+</tr>
+<tr>
+<td>Jina AI</td>
+<td>https://jina.ai/embeddings/ and https://jina.ai/reranker/</td>
+</tr>
+<tr>
+<td>GigaChat</td>
+<td>https://developers.sber.ru/docs/ru/gigachat/api/tariffs</td>
+</tr>
+<tr>
+<td>YandexGPT</td>
+<td>https://yandex.cloud/ru/docs/foundation-models/pricing</td>
+</tr>
+<tr>
+<td>vLLM</td>
+<td>https://docs.vllm.ai/</td>
+</tr>
+<tr>
+<td>TGI</td>
+<td>https://huggingface.co/docs/text-generation-inference</td>
+</tr>
+<tr>
+<td>TensorRT-LLM</td>
+<td>https://github.com/NVIDIA/TensorRT-LLM</td>
+</tr>
+<tr>
+<td>BentoML</td>
+<td>https://www.bentoml.com/pricing</td>
+</tr>
+<tr>
+<td>Datadog</td>
+<td>https://www.datadoghq.com/pricing/</td>
+</tr>
+<tr>
+<td>New Relic</td>
+<td>https://newrelic.com/pricing</td>
+</tr>
+<tr>
+<td>Dynatrace</td>
+<td>https://www.dynatrace.com/pricing/</td>
+</tr>
+<tr>
+<td>Honeycomb</td>
+<td>https://www.honeycomb.io/pricing</td>
+</tr>
+<tr>
+<td>Grafana Cloud</td>
+<td>https://grafana.com/pricing/</td>
+</tr>
+<tr>
+<td>Sentry</td>
+<td>https://sentry.io/pricing/</td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td>https://clickhouse.com/cloud and https://clickhouse.com/pricing</td>
+</tr>
+<tr>
+<td>InfluxDB</td>
+<td>https://www.influxdata.com/influxdb-cloud-pricing</td>
+</tr>
+<tr>
+<td>BigQuery</td>
+<td>https://cloud.google.com/bigquery/pricing</td>
+</tr>
+<tr>
+<td>Snowflake</td>
+<td>https://www.snowflake.com/pricing/</td>
+</tr>
+<tr>
+<td>Amazon S3</td>
+<td>https://aws.amazon.com/s3/pricing/</td>
+</tr>
+<tr>
+<td>Google Cloud Storage</td>
+<td>https://cloud.google.com/storage/pricing</td>
+</tr>
+<tr>
+<td>Azure Blob</td>
+<td>https://azure.microsoft.com/pricing/details/storage/blobs/</td>
+</tr>
+<tr>
+<td>Yandex Object Storage</td>
+<td>https://yandex.cloud/ru/docs/storage/pricing</td>
+</tr>
+<tr>
+<td>Selectel Storage</td>
+<td>https://selectel.ru/services/cloud/storage/</td>
+</tr>
+<tr>
+<td>MinIO</td>
+<td>https://min.io/pricing</td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>https://redis.io/pricing/</td>
+</tr>
+<tr>
+<td>Dragonfly</td>
+<td>https://www.dragonflydb.io/pricing</td>
+</tr>
+<tr>
+<td>Hazelcast</td>
+<td>https://hazelcast.com/pricing/</td>
+</tr>
+<tr>
+<td>Aerospike</td>
+<td>https://aerospike.com/pricing/</td>
+</tr>
+<tr>
+<td>Kong</td>
+<td>https://konghq.com/pricing</td>
+</tr>
+<tr>
+<td>Tyk</td>
+<td>https://tyk.io/pricing/</td>
+</tr>
+<tr>
+<td>AWS API Gateway</td>
+<td>https://aws.amazon.com/api-gateway/pricing/</td>
+</tr>
+<tr>
+<td>Cloudflare Workers</td>
+<td>https://developers.cloudflare.com/workers/platform/pricing/</td>
+</tr>
+<tr>
+<td>Presidio</td>
+<td>https://microsoft.github.io/presidio/</td>
+</tr>
+<tr>
+<td>AWS Comprehend</td>
+<td>https://aws.amazon.com/comprehend/pricing/</td>
+</tr>
+<tr>
+<td>Google Sensitive Data Protection</td>
+<td>https://cloud.google.com/sensitive-data-protection/pricing</td>
+</tr>
+<tr>
+<td>Azure AI Language PII</td>
+<td>https://azure.microsoft.com/pricing/details/cognitive-services/language-service/</td>
+</tr>
+<tr>
+<td>Nightfall</td>
+<td>https://www.nightfall.ai/pricing</td>
+</tr>
+<tr>
+<td>Privacera</td>
+<td>https://privacera.com/</td>
+</tr>
+<tr>
+<td>Immuta</td>
+<td>https://www.immuta.com/pricing/</td>
+</tr>
+<tr>
+<td>TokenEx</td>
+<td>https://www.tokenex.com/</td>
+</tr>
+<tr>
+<td>Delphix</td>
+<td>https://www.perforce.com/products/delphix</td>
+</tr>
+<tr>
+<td>IRI FieldShield</td>
+<td>https://www.iri.com/products/fieldshield</td>
+</tr>
+<tr>
+<td>Syntho</td>
+<td>https://www.syntho.ai/</td>
+</tr>
+</tbody></table></div>
+<p>&lt;!-- AUTO-GENERATED: do not edit education blocks manually --&gt;</p>
+<p>💡 <strong>Для БА: что это значит для проекта?</strong></p>
+<ul>
+<li>Source Register — это evidence trail исследования: по нему ревьюер видит, откуда взяты цены, лицензии, capabilities и ограничения каждого vendor.</li>
+<li>Для проекта это важно, потому что vendor pages меняются. Перед закупкой или implementation нельзя полагаться только на research snapshot; нужно перепроверить дату доступа, тариф, регион, license и support model.</li>
+<li>Технически: ссылки в этом документе проверены как внешние web sources на дату BL-67; future updates должны сохранять access date и не смешивать official docs, pricing и community обзоры без пометки.</li>
+<li>Когда использовать: при security/legal review, перед budget approval и перед обновлением backlog/ADR после изменения vendor pricing или license terms.</li>
+</ul>
+<p>📚 <strong>Читать далее:</strong></p>
+<ul>
+<li><a href="https://keepachangelog.com/ru/1.1.0/">Keep a Changelog</a> — как фиксировать изменения документации и решений, RU.</li>
+<li><a href="https://semver.org/lang/ru/">Semantic Versioning</a> — подход к versioning артефактов и контрактов, RU.</li>
+<li><a href="https://validator.w3.org/checklink">W3C Link Checker</a> — инструментальная проверка ссылок, EN.</li>
+</ul>
+<hr>
+<h2 id="21-история-изменений">21. История изменений</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+<th>Версия</th>
+<th>Дата</th>
+<th>Изменение</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>v1-ru-education</td>
+<td>2026-05-21</td>
+<td>BL-67 RU adaptation for BA/PO stakeholders: sections 4-20 keep BL-61 technical names and add <code>Для БА</code> explanations plus external reading links.</td>
+</tr>
+<tr>
+<td>v1</td>
+<td>2026-05-21</td>
+<td>First BL-61 market research covering 13 microservices architecture components, recommendations, migration paths, risks and source register.</td>
+</tr>
+</tbody></table></div>
+</main>
+</body>
+</html>

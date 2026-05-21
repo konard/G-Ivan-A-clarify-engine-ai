@@ -7,6 +7,15 @@
 ## [Unreleased]
 
 ### Documentation
+- **DOCS: BL-61 HTML export with full-width tables for research review.**
+  Добавлен статический HTML-артефакт
+  [`docs/research/html/2026-05-21_bl-61_market-research_ru-education_v1.html`](docs/research/html/2026-05-21_bl-61_market-research_ru-education_v1.html)
+  для просмотра широких сравнительных таблиц BL-61 без горизонтальной потери
+  контекста на desktop-экранах. Конвертация воспроизводится без внешних
+  зависимостей через
+  [`scripts/tools/md_to_html_fullwidth.py`](scripts/tools/md_to_html_fullwidth.py);
+  docs index обновлён ссылкой на HTML и командой генерации.
+
 - **DOCS: BL-67 RU-education layer for BL-61 market research.**
   Добавлен отдельный BA/PO-facing артефакт
   [`docs/research/2026-05-21_bl-61_market-research_ru-education_v1.md`](docs/research/2026-05-21_bl-61_market-research_ru-education_v1.md)
