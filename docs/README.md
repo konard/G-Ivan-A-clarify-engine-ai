@@ -28,6 +28,7 @@ review. Детальные README внутри подпапок остаются
 | BL-61.1 HTML | [`research/html/2026-05-21_bl-61_market-research_ru-education_v2.html`](research/html/2026-05-21_bl-61_market-research_ru-education_v2.html) | HTML v2 с переносом строк в ячейках таблиц (`white-space: normal`, без `text-overflow: ellipsis`). |
 | BL-58 | [`research/2026-05-21_bl-57_retrieval-architecture_v1.md`](research/2026-05-21_bl-57_retrieval-architecture_v1.md) | Retrieval architecture experiments и query-expansion recommendation. |
 | BL-59 | [`research/2026-05-20_bl-59_requirement-parsing_v1.md`](research/2026-05-20_bl-59_requirement-parsing_v1.md) | Requirement parsing research и two-layer parser design. |
+| BL-68 | [`research/2026-05-21_bl-68_breakthrough-team-vision_v1.md`](research/2026-05-21_bl-68_breakthrough-team-vision_v1.md) | Видение команды «Прорыва»: data moat, hybrid inference, Core+Extensible Shell архитектура, roadmap. Только для сверки вариантов. |
 
 ## Просмотр research-документов в HTML
 

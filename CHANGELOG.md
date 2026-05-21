@@ -7,6 +7,13 @@
 ## [Unreleased]
 
 ### Documentation
+- **RESEARCH: BL-68 breakthrough team vision — project development strategy.**
+  Сохранено независимое видение команды «Прорыва» для дальнейшей сверки вариантов:
+  [`docs/research/2026-05-21_bl-68_breakthrough-team-vision_v1.md`](docs/research/2026-05-21_bl-68_breakthrough-team-vision_v1.md).
+  Документ содержит позицию команды (data moat, hybrid inference), ключевые отличия
+  от предложения команды поддержки, рекомендуемую архитектуру MVP «Core + Extensible Shell»
+  и roadmap на 3–6 месяцев. Не вносить в основную документацию.
+
 - **RESEARCH: BL-62 synthesis of optimized architecture options (budget vs target).**
   Добавлен синтез исследований BL-60 / BL-61 и комментариев PO/support:
   [`docs/research/2026-05-21_bl-62_synthesis-optimized-architectures_v1.md`](docs/research/2026-05-21_bl-62_synthesis-optimized-architectures_v1.md).
