@@ -7,6 +7,19 @@
 ## [Unreleased]
 
 ### Documentation
+- **DOCS: BL-61.1 business-friendly education blocks for market research.**
+  Добавлен v2-артефакт
+  [`docs/research/2026-05-21_bl-61_market-research_ru-education_v2.md`](docs/research/2026-05-21_bl-61_market-research_ru-education_v2.md)
+  с бизнес-пояснением `Пояснение для БА` в сравнительных таблицах всех 13
+  компонентов (§4-§16), конкретными сценариями `Когда применять` для пилота
+  Clarify Engine (`1-3 БА`, `≤15 запросов/мин`, rollback, anti-cases) и
+  унифицированными блоками `💡 Для БА` в структуре: что значит для проекта,
+  почему важно для БА, технический контекст, когда выбирать, ссылки для
+  чтения. HTML v2
+  [`docs/research/html/2026-05-21_bl-61_market-research_ru-education_v2.html`](docs/research/html/2026-05-21_bl-61_market-research_ru-education_v2.html)
+  сгенерирован без `text-overflow: ellipsis` / `white-space: nowrap`; таблицы
+  используют `white-space: normal` и `overflow-wrap: anywhere`.
+
 - **DOCS: BL-61 HTML export with full-width tables for research review.**
   Добавлен статический HTML-артефакт
   [`docs/research/html/2026-05-21_bl-61_market-research_ru-education_v1.html`](docs/research/html/2026-05-21_bl-61_market-research_ru-education_v1.html)
