@@ -126,8 +126,9 @@ BL-32 (Config Sync) — независима, tech debt
 | BL-54 | Restore file uploader in «📊 Анализ ТЗ» mode | P0 | 📝 New | BL-29, BL-41 | Регресс BL-41: `src/ui/app.py` не содержит `st.file_uploader`, что блокирует user guide §2 и пилотный сценарий (issue [#182](https://github.com/G-Ivan-A/clarify-engine-ai/issues/182), §5) | Acceptance — в [`2026-05-20_backlog_arm-pilot-test-fixes_v1.md`](2026-05-20_backlog_arm-pilot-test-fixes_v1.md) §4.5 |
 | BL-55 | First-response UX (queue / progress messaging) | P2 | 📝 New | BL-54 | Первый запрос на холодном Ollama занимает 30–60 с без визуального прогресса, БА воспринимает как зависание (issue [#182](https://github.com/G-Ivan-A/clarify-engine-ai/issues/182), §6) | Acceptance — в [`2026-05-20_backlog_arm-pilot-test-fixes_v1.md`](2026-05-20_backlog_arm-pilot-test-fixes_v1.md) §4.6 |
 | BL-56 | `datetime.utcnow()` → timezone-aware (Python 3.14) | P2 | 📝 New | — | `DeprecationWarning` в `knowledge_base/indexing/build_index.py:116`, дополнительно затрагивает логи `pipeline.py` (issue [#182](https://github.com/G-Ivan-A/clarify-engine-ai/issues/182), §7) | Acceptance — в [`2026-05-20_backlog_arm-pilot-test-fixes_v1.md`](2026-05-20_backlog_arm-pilot-test-fixes_v1.md) §4.7 |
+| BL-67 | RU-education layer for BL-61 market research | P2 | ✅ Closed | BL-61 | Адаптировать market research по микросервисным компонентам для BA/PO: сохранить technical product names, добавить русские пояснения `Для БА` и внешние ссылки для углубления (issue [#220](https://github.com/G-Ivan-A/clarify-engine-ai/issues/220)) | Артефакт [`../research/2026-05-21_bl-61_market-research_ru-education_v1.md`](../research/2026-05-21_bl-61_market-research_ru-education_v1.md), regression-тест [`../../tests/test_research_education.py`](../../tests/test_research_education.py), реализация [PR #221](https://github.com/G-Ivan-A/clarify-engine-ai/pull/221) |
 
-> **Сквозная нумерация (V-10) сохранена.** Следующий свободный ID после v1.5 — **BL-57**.
+> **Сквозная нумерация (V-10) сохранена.** Следующий свободный ID после v1.5 — **BL-68**.
 
 ---
 
